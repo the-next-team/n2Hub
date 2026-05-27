@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ChevronRight, Users, UserPlus, Trash2, Crown,
-  User, Loader2, AlertCircle, Search,
+  User, Loader2, AlertCircle, Search, X,
 } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useMembers } from '../hooks/useMembers'
@@ -15,27 +15,66 @@ const ROLE_COLOR = {
   member: 'bg-gray-100 text-gray-600',
 }
 
+type ProfileResult = { id: string; email: string; display_name: string | null }
+
 export default function MemberManage() {
   const { id: projectId } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { project } = useProject(projectId!)
   const {
     members, loading, error,
-    findUserByEmail, addMember, updateRole, removeMember,
+    findUserByEmail, searchProfiles, addMember, updateRole, removeMember,
   } = useMembers(projectId!)
 
-  // 현재 로그인 유저가 PM인지 여부
   const myRole = members.find(m => m.user_id === user?.id)?.role
-  // 프로젝트 생성자도 PM 권한
   const isPM = myRole === 'pm' || project?.createdBy === user?.id
 
   // 멤버 추가 폼
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'pm' | 'member'>('member')
-  const [displayName, setDisplayName] = useState('')
-  const [adding, setAdding] = useState(false)
-  const [addError, setAddError] = useState<string | null>(null)
-  const [addSuccess, setAddSuccess] = useState(false)
+  const [email, setEmail]               = useState('')
+  const [role, setRole]                 = useState<'pm' | 'member'>('member')
+  const [displayName, setDisplayName]   = useState('')
+  const [adding, setAdding]             = useState(false)
+  const [addError, setAddError]         = useState<string | null>(null)
+  const [addSuccess, setAddSuccess]     = useState(false)
+
+  // 이메일 자동완성
+  const [suggestions, setSuggestions]   = useState<ProfileResult[]>([])
+  const [showSuggest, setShowSuggest]   = useState(false)
+  const [searching, setSearching]       = useState(false)
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapperRef                      = useRef<HTMLDivElement>(null)
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSuggest(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleEmailChange(val: string) {
+    setEmail(val)
+    setAddError(null)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (val.length < 2) { setSuggestions([]); setShowSuggest(false); return }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      const results = await searchProfiles(val)
+      setSuggestions(results)
+      setShowSuggest(results.length > 0)
+      setSearching(false)
+    }, 300)
+  }
+
+  function selectSuggestion(p: ProfileResult) {
+    setEmail(p.email)
+    setDisplayName(p.display_name ?? '')
+    setSuggestions([])
+    setShowSuggest(false)
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -45,10 +84,7 @@ export default function MemberManage() {
     setAddSuccess(false)
     try {
       const found = await findUserByEmail(email)
-      if (!found) {
-        setAddError('해당 이메일로 가입된 계정이 없습니다.')
-        return
-      }
+      if (!found) { setAddError('해당 이메일로 가입된 계정이 없습니다.'); return }
       await addMember(found.id, found.email, role, displayName || found.display_name || undefined)
       setEmail('')
       setDisplayName('')
@@ -86,7 +122,6 @@ export default function MemberManage() {
         </p>
       </div>
 
-      {/* 에러 */}
       {error && (
         <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg flex items-center gap-2">
           <AlertCircle size={15} /> {error}
@@ -129,20 +164,54 @@ export default function MemberManage() {
           </h2>
           <form onSubmit={handleAdd} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
+              {/* 이메일 + 자동완성 */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">이메일 *</label>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="relative" ref={wrapperRef}>
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  {searching && (
+                    <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+                  )}
+                  {email && !searching && (
+                    <button
+                      type="button"
+                      onClick={() => { setEmail(''); setSuggestions([]); setShowSuggest(false) }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
                   <input
-                    type="email"
+                    type="text"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="가입된 이메일 주소"
-                    required
-                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={e => handleEmailChange(e.target.value)}
+                    onFocus={() => suggestions.length > 0 && setShowSuggest(true)}
+                    placeholder="이메일 일부를 입력하세요"
+                    autoComplete="off"
+                    className="w-full pl-8 pr-7 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+
+                  {/* 자동완성 드롭다운 */}
+                  {showSuggest && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      {suggestions.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseDown={() => selectSuggestion(p)}
+                          className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          <div className="text-sm font-medium text-gray-800">
+                            {p.display_name ?? p.email.split('@')[0]}
+                          </div>
+                          <div className="text-xs text-gray-400">{p.email}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+
               <div>
                 <label className="block text-xs text-gray-500 mb-1">표시 이름 (선택)</label>
                 <input
@@ -154,6 +223,7 @@ export default function MemberManage() {
                 />
               </div>
             </div>
+
             <div className="flex items-center gap-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">역할 *</label>
@@ -175,6 +245,7 @@ export default function MemberManage() {
                 {adding ? '추가 중...' : '추가'}
               </button>
             </div>
+
             {addError && (
               <p className="text-xs text-red-500 flex items-center gap-1">
                 <AlertCircle size={12} /> {addError}
@@ -234,64 +305,89 @@ function MemberRow({
 }) {
   const [changing, setChanging] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [rowError, setRowError] = useState<string | null>(null)
 
   async function handleRoleChange(newRole: 'pm' | 'member') {
     setChanging(true)
-    try { await onRoleChange(member.id, newRole) }
-    finally { setChanging(false) }
+    setRowError(null)
+    try {
+      await onRoleChange(member.id, newRole)
+    } catch (err) {
+      setRowError((err as Error).message)
+    } finally {
+      setChanging(false)
+    }
   }
 
   async function handleRemove() {
     if (!confirm(`${member.display_name ?? member.email} 님을 멤버에서 제거할까요?`)) return
     setRemoving(true)
-    try { await onRemove(member.id) }
-    finally { setRemoving(false) }
+    setRowError(null)
+    try {
+      await onRemove(member.id)
+    } catch (err) {
+      setRowError((err as Error).message)
+    } finally {
+      setRemoving(false)
+    }
   }
 
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-      {/* 아바타 */}
-      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
-        {(member.display_name ?? member.email)[0].toUpperCase()}
-      </div>
-
-      {/* 정보 */}
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-900 text-sm flex items-center gap-2">
-          {member.display_name ?? member.email.split('@')[0]}
-          {isMe && <span className="text-xs text-gray-400">(나)</span>}
+    <div className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-4">
+        {/* 아바타 */}
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+          {(member.display_name ?? member.email)[0].toUpperCase()}
         </div>
-        <div className="text-xs text-gray-400 truncate">{member.email}</div>
+
+        {/* 정보 */}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-gray-900 text-sm flex items-center gap-2">
+            {member.display_name ?? member.email.split('@')[0]}
+            {isMe && <span className="text-xs text-gray-400">(나)</span>}
+          </div>
+          <div className="text-xs text-gray-400 truncate">{member.email}</div>
+        </div>
+
+        {/* 역할 */}
+        {isPM && !isMe ? (
+          <select
+            value={member.role}
+            onChange={e => handleRoleChange(e.target.value as 'pm' | 'member')}
+            disabled={changing}
+            className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="pm">PM</option>
+            <option value="member">멤버</option>
+          </select>
+        ) : (
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ROLE_COLOR[member.role]}`}>
+            {member.role === 'pm' && <Crown size={10} className="inline mr-1" />}
+            {ROLE_LABEL[member.role]}
+          </span>
+        )}
+
+        {/* 삭제 버튼 (PM만, 자기 자신 제외) */}
+        {isPM && !isMe && (
+          <button
+            onClick={handleRemove}
+            disabled={removing}
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+            title="멤버 제거"
+          >
+            {removing
+              ? <Loader2 size={15} className="animate-spin" />
+              : <Trash2 size={15} />
+            }
+          </button>
+        )}
       </div>
 
-      {/* 역할 */}
-      {isPM && !isMe ? (
-        <select
-          value={member.role}
-          onChange={e => handleRoleChange(e.target.value as 'pm' | 'member')}
-          disabled={changing}
-          className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="pm">PM</option>
-          <option value="member">멤버</option>
-        </select>
-      ) : (
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ROLE_COLOR[member.role]}`}>
-          {member.role === 'pm' && <Crown size={10} className="inline mr-1" />}
-          {ROLE_LABEL[member.role]}
-        </span>
-      )}
-
-      {/* 제거 (PM만, 자기 자신 제외) */}
-      {isPM && !isMe && (
-        <button
-          onClick={handleRemove}
-          disabled={removing}
-          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-          title="멤버 제거"
-        >
-          {removing ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-        </button>
+      {/* 행 단위 에러 */}
+      {rowError && (
+        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1 pl-13">
+          <AlertCircle size={11} /> {rowError}
+        </p>
       )}
     </div>
   )

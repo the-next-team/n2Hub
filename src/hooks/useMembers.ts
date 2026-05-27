@@ -58,7 +58,7 @@ export function useMembers(projectId: string) {
 
   useEffect(() => { if (projectId) fetchMembers() }, [projectId, fetchMembers])
 
-  /** 이메일로 유저 검색 */
+  /** 이메일 정확히 일치하는 유저 검색 */
   const findUserByEmail = useCallback(async (email: string) => {
     const { data, error } = await supabase
       .from('profiles')
@@ -67,6 +67,17 @@ export function useMembers(projectId: string) {
       .maybeSingle()
     if (error) throw error
     return data as { id: string; email: string; display_name: string | null } | null
+  }, [])
+
+  /** 이메일 부분 검색 (자동완성용) */
+  const searchProfiles = useCallback(async (query: string) => {
+    if (query.length < 2) return []
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, email, display_name')
+      .ilike('email', `%${query}%`)
+      .limit(6)
+    return (data ?? []) as { id: string; email: string; display_name: string | null }[]
   }, [])
 
   /** 멤버 추가 */
@@ -125,7 +136,7 @@ export function useMembers(projectId: string) {
 
   return {
     members, loading, error,
-    fetchMembers, findUserByEmail,
+    fetchMembers, findUserByEmail, searchProfiles,
     addMember, updateRole, removeMember, getMyRole,
   }
 }
