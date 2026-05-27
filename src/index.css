@@ -36,6 +36,14 @@
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
   --color-content-subtle: var(--content-subtle);
+
+  /* 상태색 — text/soft 쌍 (Badge 등에서 참조) */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
 }
 
 :root {
@@ -53,6 +61,13 @@
   --content: #18181b;        /* zinc-900 */
   --content-muted: #71717a;  /* zinc-500 */
   --content-subtle: #a1a1aa; /* zinc-400 */
+
+  --success: #15803d;        /* green-700 */
+  --success-soft: #dcfce7;   /* green-100 */
+  --warning: #c2410c;        /* orange-700 */
+  --warning-soft: #ffedd5;   /* orange-100 */
+  --danger: #b91c1c;         /* red-700 */
+  --danger-soft: #fee2e2;    /* red-100 */
 }
 
 .dark {
@@ -68,6 +83,13 @@
   --content: #ededf0;
   --content-muted: #a1a1aa;
   --content-subtle: #71717a;
+
+  --success: #4ade80;                      /* green-400 */
+  --success-soft: rgb(34 197 94 / 0.15);
+  --warning: #fb923c;                      /* orange-400 */
+  --warning-soft: rgb(249 115 22 / 0.15);
+  --danger: #f87171;                       /* red-400 */
+  --danger-soft: rgb(239 68 68 / 0.15);
 }
 
 @layer base {

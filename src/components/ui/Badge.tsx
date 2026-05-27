@@ -5,11 +5,11 @@ type Tone = 'gray' | 'green' | 'blue' | 'orange' | 'purple' | 'red'
 
 const tones: Record<Tone, string> = {
   gray: 'bg-surface-hover text-content-muted',
-  green: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400',
+  green: 'bg-success-soft text-success',
   blue: 'bg-primary-soft text-primary',
-  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400',
+  orange: 'bg-warning-soft text-warning',
   purple: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+  red: 'bg-danger-soft text-danger',
 }
 
 type Props = {

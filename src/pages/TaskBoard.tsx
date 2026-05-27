@@ -22,8 +22,8 @@ const STATUS_LABEL: Record<Task['status'], string> = {
 const STATUS_COLOR: Record<Task['status'], string> = {
   not_started: 'bg-surface-hover text-content-muted',
   in_progress: 'bg-primary-soft text-primary',
-  completed:   'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400',
-  delayed:     'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+  completed:   'bg-success-soft text-success',
+  delayed:     'bg-danger-soft text-danger',
 }
 const STATUS_ICON: Record<Task['status'], React.ReactNode> = {
   not_started: <Clock size={12} />,
