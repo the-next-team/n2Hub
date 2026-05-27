@@ -8,6 +8,9 @@
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Helvetica Neue",
     "Noto Sans KR", sans-serif;
+
+  /* 미니멀 프로페셔널 — 카드 10px, 컨트롤은 rounded-lg(8px) 유지 */
+  --radius-xl: 0.625rem;
 }
 
 /* 시맨틱 컬러 토큰 — inline 으로 선언해 .dark 오버라이드가 유틸리티에 반영됨
@@ -28,33 +31,35 @@
 }
 
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-soft: #eff6ff;
+  /* 브랜드 — 인디고 */
+  --primary: #4f46e5;       /* indigo-600 */
+  --primary-hover: #4338ca; /* indigo-700 */
+  --primary-soft: #eef2ff;  /* indigo-50 */
 
-  --canvas: #f7f8fa;
+  /* 뉴트럴 — zinc 램프 (중립 회색) */
+  --canvas: #fafafa;
   --surface: #ffffff;
-  --surface-hover: #f3f4f6;
-  --line: #e5e7eb;
+  --surface-hover: #f4f4f5; /* zinc-100 */
+  --line: #e8e8ec;
 
-  --content: #111827;
-  --content-muted: #6b7280;
-  --content-subtle: #9ca3af;
+  --content: #18181b;        /* zinc-900 */
+  --content-muted: #71717a;  /* zinc-500 */
+  --content-subtle: #a1a1aa; /* zinc-400 */
 }
 
 .dark {
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
-  --primary-soft: #1e293b;
+  --primary: #818cf8;       /* indigo-400 */
+  --primary-hover: #a5b4fc; /* indigo-300 */
+  --primary-soft: #232136;  /* indigo-tinted dark */
 
-  --canvas: #0b0e14;
-  --surface: #141925;
-  --surface-hover: #1c2230;
-  --line: #232a38;
+  --canvas: #0a0a0b;
+  --surface: #161618;
+  --surface-hover: #202023;
+  --line: #28282d;
 
-  --content: #e6e8ec;
-  --content-muted: #9aa4b2;
-  --content-subtle: #6b7484;
+  --content: #ededf0;
+  --content-muted: #a1a1aa;
+  --content-subtle: #71717a;
 }
 
 @layer base {
