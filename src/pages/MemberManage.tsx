@@ -342,7 +342,10 @@ function MemberRow({
   }
 
   async function handleRemove() {
-    if (!confirm(`${member.display_name ?? member.email} 님을 멤버에서 제거할까요?`)) return
+    const msg = isMe
+      ? '프로젝트에서 나가시겠습니까? 다시 초대받아야 참여할 수 있습니다.'
+      : `${member.display_name ?? member.email} 님을 멤버에서 제거할까요?`
+    if (!confirm(msg)) return
     setRemoving(true)
     setRowError(null)
     try { await onRemove(member.id) }
@@ -427,17 +430,26 @@ function MemberRow({
           </span>
         )}
 
-        {/* 삭제 (PM만, 본인 제외) */}
-        {isPM && !isMe && (
+        {/* 삭제: PM은 타인 제거, 본인은 언제나 나가기 가능 */}
+        {(isPM && !isMe) || isMe ? (
           <button
             onClick={handleRemove}
             disabled={removing}
-            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-            title="멤버 제거"
+            className={`flex items-center gap-1 rounded-lg transition-colors disabled:opacity-50 ${
+              isMe
+                ? 'px-2.5 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200 hover:border-red-200'
+                : 'p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50'
+            }`}
+            title={isMe ? '프로젝트에서 나가기' : '멤버 제거'}
           >
-            {removing ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+            {removing
+              ? <Loader2 size={15} className="animate-spin" />
+              : isMe
+                ? <><Trash2 size={13} />나가기</>
+                : <Trash2 size={15} />
+            }
           </button>
-        )}
+        ) : null}
       </div>
 
       {rowError && (
