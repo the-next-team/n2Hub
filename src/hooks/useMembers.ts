@@ -112,6 +112,19 @@ export function useMembers(projectId: string) {
     setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m))
   }, [])
 
+  /** 표시 이름 변경 */
+  const updateDisplayName = useCallback(async (memberId: string, displayName: string) => {
+    setError(null)
+    const { error } = await supabase
+      .from('project_members')
+      .update({ display_name: displayName.trim() || null })
+      .eq('id', memberId)
+    if (error) throw error
+    setMembers(prev => prev.map(m =>
+      m.id === memberId ? { ...m, display_name: displayName.trim() || null } : m
+    ))
+  }, [])
+
   /** 멤버 제거 */
   const removeMember = useCallback(async (memberId: string) => {
     setError(null)
@@ -137,6 +150,6 @@ export function useMembers(projectId: string) {
   return {
     members, loading, error,
     fetchMembers, findUserByEmail, searchProfiles,
-    addMember, updateRole, removeMember, getMyRole,
+    addMember, updateRole, updateDisplayName, removeMember, getMyRole,
   }
 }

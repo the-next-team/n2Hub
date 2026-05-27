@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ChevronRight, Users, UserPlus, Trash2, Crown,
-  User, Loader2, AlertCircle, Search, X,
+  User, Loader2, AlertCircle, Search, X, Pencil, Check,
 } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useMembers } from '../hooks/useMembers'
@@ -23,7 +23,7 @@ export default function MemberManage() {
   const { project } = useProject(projectId!)
   const {
     members, loading, error,
-    findUserByEmail, searchProfiles, addMember, updateRole, removeMember,
+    findUserByEmail, searchProfiles, addMember, updateRole, updateDisplayName, removeMember,
   } = useMembers(projectId!)
 
   const myRole = members.find(m => m.user_id === user?.id)?.role
@@ -284,6 +284,7 @@ export default function MemberManage() {
                 isMe={member.user_id === user?.id}
                 isPM={isPM}
                 onRoleChange={updateRole}
+                onDisplayNameChange={updateDisplayName}
                 onRemove={removeMember}
               />
             ))}
@@ -295,27 +296,48 @@ export default function MemberManage() {
 }
 
 function MemberRow({
-  member, isMe, isPM, onRoleChange, onRemove,
+  member, isMe, isPM, onRoleChange, onDisplayNameChange, onRemove,
 }: {
   member: ProjectMember
   isMe: boolean
   isPM: boolean
   onRoleChange: (id: string, role: 'pm' | 'member') => Promise<void>
+  onDisplayNameChange: (id: string, name: string) => Promise<void>
   onRemove: (id: string) => Promise<void>
 }) {
-  const [changing, setChanging] = useState(false)
-  const [removing, setRemoving] = useState(false)
-  const [rowError, setRowError] = useState<string | null>(null)
+  const [changing, setChanging]       = useState(false)
+  const [removing, setRemoving]       = useState(false)
+  const [rowError, setRowError]       = useState<string | null>(null)
+
+  // 이름 인라인 편집
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput]     = useState(member.display_name ?? '')
+  const [savingName, setSavingName]   = useState(false)
+  const nameInputRef                  = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.focus()
+  }, [editingName])
 
   async function handleRoleChange(newRole: 'pm' | 'member') {
     setChanging(true)
     setRowError(null)
+    try { await onRoleChange(member.id, newRole) }
+    catch (err) { setRowError((err as Error).message) }
+    finally { setChanging(false) }
+  }
+
+  async function handleSaveName() {
+    if (nameInput.trim() === (member.display_name ?? '')) { setEditingName(false); return }
+    setSavingName(true)
+    setRowError(null)
     try {
-      await onRoleChange(member.id, newRole)
+      await onDisplayNameChange(member.id, nameInput)
+      setEditingName(false)
     } catch (err) {
       setRowError((err as Error).message)
     } finally {
-      setChanging(false)
+      setSavingName(false)
     }
   }
 
@@ -323,14 +345,12 @@ function MemberRow({
     if (!confirm(`${member.display_name ?? member.email} 님을 멤버에서 제거할까요?`)) return
     setRemoving(true)
     setRowError(null)
-    try {
-      await onRemove(member.id)
-    } catch (err) {
-      setRowError((err as Error).message)
-    } finally {
-      setRemoving(false)
-    }
+    try { await onRemove(member.id) }
+    catch (err) { setRowError((err as Error).message) }
+    finally { setRemoving(false) }
   }
+
+  const canEditName = isMe || isPM  // 본인 또는 PM은 이름 수정 가능
 
   return (
     <div className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
@@ -340,12 +360,52 @@ function MemberRow({
           {(member.display_name ?? member.email)[0].toUpperCase()}
         </div>
 
-        {/* 정보 */}
+        {/* 이름 + 이메일 */}
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900 text-sm flex items-center gap-2">
-            {member.display_name ?? member.email.split('@')[0]}
-            {isMe && <span className="text-xs text-gray-400">(나)</span>}
-          </div>
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={nameInputRef}
+                value={nameInput}
+                onChange={e => setNameInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveName()
+                  if (e.key === 'Escape') { setEditingName(false); setNameInput(member.display_name ?? '') }
+                }}
+                placeholder="표시 이름"
+                className="text-sm border border-blue-400 rounded px-2 py-0.5 w-36 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleSaveName}
+                disabled={savingName}
+                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                title="저장"
+              >
+                {savingName ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              </button>
+              <button
+                onClick={() => { setEditingName(false); setNameInput(member.display_name ?? '') }}
+                className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                title="취소"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <div className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
+              {member.display_name ?? <span className="text-gray-400 italic">이름 없음</span>}
+              {isMe && <span className="text-xs text-gray-400">(나)</span>}
+              {canEditName && (
+                <button
+                  onClick={() => { setEditingName(true); setNameInput(member.display_name ?? '') }}
+                  className="p-0.5 text-gray-300 hover:text-blue-500 rounded transition-colors"
+                  title="이름 수정"
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
+            </div>
+          )}
           <div className="text-xs text-gray-400 truncate">{member.email}</div>
         </div>
 
@@ -367,7 +427,7 @@ function MemberRow({
           </span>
         )}
 
-        {/* 삭제 버튼 (PM만, 자기 자신 제외) */}
+        {/* 삭제 (PM만, 본인 제외) */}
         {isPM && !isMe && (
           <button
             onClick={handleRemove}
@@ -375,17 +435,13 @@ function MemberRow({
             className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
             title="멤버 제거"
           >
-            {removing
-              ? <Loader2 size={15} className="animate-spin" />
-              : <Trash2 size={15} />
-            }
+            {removing ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
           </button>
         )}
       </div>
 
-      {/* 행 단위 에러 */}
       {rowError && (
-        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1 pl-13">
+        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
           <AlertCircle size={11} /> {rowError}
         </p>
       )}
