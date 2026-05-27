@@ -1,5 +1,88 @@
 @import "tailwindcss";
 
+/* 클래스 기반 다크모드 (.dark 또는 그 하위) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 폰트 토큰 — Pretendard 우선 */
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Helvetica Neue",
+    "Noto Sans KR", sans-serif;
+}
+
+/* 시맨틱 컬러 토큰 — inline 으로 선언해 .dark 오버라이드가 유틸리티에 반영됨
+   생성 유틸 예: bg-canvas / bg-surface / border-line / text-content / bg-primary */
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+
+  --color-content: var(--content);
+  --color-content-muted: var(--content-muted);
+  --color-content-subtle: var(--content-subtle);
+}
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --surface-hover: #f3f4f6;
+  --line: #e5e7eb;
+
+  --content: #111827;
+  --content-muted: #6b7280;
+  --content-subtle: #9ca3af;
+}
+
+.dark {
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: #1e293b;
+
+  --canvas: #0b0e14;
+  --surface: #141925;
+  --surface-hover: #1c2230;
+  --line: #232a38;
+
+  --content: #e6e8ec;
+  --content-muted: #9aa4b2;
+  --content-subtle: #6b7484;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--canvas);
+    color: var(--content);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* 얇은 스크롤바 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--line);
+    border-radius: 9999px;
+  }
+}
+
 /* TipTap editor styles */
 .tiptap {
   outline: none;

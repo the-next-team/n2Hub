@@ -1,56 +1,119 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FolderKanban, FileText, Settings, LogOut } from 'lucide-react'
-import { useAuth } from '../../lib/auth'
+import { NavLink } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  FolderKanban,
+  FileText,
+  Settings,
+  PanelLeftClose,
+  PanelLeft,
+  X,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { cn } from '../../utils'
 
-const nav = [
-  { to: '/dashboard', icon: LayoutDashboard, label: '대시보드' },
-  { to: '/projects', icon: FolderKanban, label: '프로젝트' },
-  { to: '/templates', icon: FileText, label: '템플릿' },
-  { to: '/settings', icon: Settings, label: '설정' },
+type NavItem = { to: string; icon: LucideIcon; label: string }
+type NavSection = { title: string; items: NavItem[] }
+
+const sections: NavSection[] = [
+  {
+    title: '워크스페이스',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: '대시보드' },
+      { to: '/projects', icon: FolderKanban, label: '프로젝트' },
+    ],
+  },
+  {
+    title: '관리',
+    items: [
+      { to: '/templates', icon: FileText, label: '템플릿' },
+      { to: '/settings', icon: Settings, label: '설정' },
+    ],
+  },
 ]
 
-export default function Sidebar() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+type Props = {
+  collapsed: boolean
+  onToggleCollapse: () => void
+  mobileOpen: boolean
+  onCloseMobile: () => void
+}
 
-  async function handleSignOut() {
-    await signOut()
-    navigate('/login')
-  }
-
+export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: Props) {
   return (
-    <aside className="w-60 border-r border-gray-200 bg-white flex flex-col shrink-0">
-      <div className="h-14 flex items-center px-6 border-b border-gray-200">
-        <span className="font-bold text-lg text-blue-600">n2Hub</span>
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface',
+        'transition-[width,transform] duration-200 ease-out',
+        collapsed ? 'w-16' : 'w-60',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        'lg:static lg:translate-x-0',
+      )}
+    >
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
+          n2
+        </div>
+        {!collapsed && <span className="text-lg font-bold text-content">n2Hub</span>}
+        <button
+          onClick={onCloseMobile}
+          className="ml-auto rounded-md p-1 text-content-muted hover:bg-surface-hover hover:text-content lg:hidden"
+          aria-label="사이드바 닫기"
+        >
+          <X size={18} />
+        </button>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
-        {nav.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
+
+      <nav className="flex-1 space-y-5 overflow-y-auto p-3">
+        {sections.map(section => (
+          <div key={section.title}>
+            {!collapsed && (
+              <p className="mb-1.5 px-3 text-xs font-medium uppercase tracking-wider text-content-subtle">
+                {section.title}
+              </p>
+            )}
+            <div className="space-y-1">
+              {section.items.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={onCloseMobile}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                      collapsed && 'justify-center px-0',
+                      isActive
+                        ? 'bg-primary-soft font-medium text-primary'
+                        : 'text-content-muted hover:bg-surface-hover hover:text-content',
+                    )
+                  }
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {!collapsed && <span>{label}</span>}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
-      <div className="p-4 border-t border-gray-200">
-        <div className="px-3 py-2 mb-1">
-          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
-        </div>
+
+      <div className="hidden border-t border-line p-3 lg:block">
         <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+          onClick={onToggleCollapse}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-content-muted transition-colors hover:bg-surface-hover hover:text-content',
+            collapsed && 'justify-center px-0',
+          )}
+          title={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
         >
-          <LogOut size={18} />
-          로그아웃
+          {collapsed ? (
+            <PanelLeft size={18} />
+          ) : (
+            <>
+              <PanelLeftClose size={18} />
+              <span>접기</span>
+            </>
+          )}
         </button>
       </div>
     </aside>
