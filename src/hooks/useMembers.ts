@@ -86,6 +86,7 @@ export function useMembers(projectId: string) {
     email: string,
     role: 'pm' | 'member',
     displayName?: string,
+    inviteOptions?: { projectName: string; inviterName: string },
   ) => {
     setError(null)
     const { error } = await supabase.from('project_members').insert({
@@ -99,6 +100,19 @@ export function useMembers(projectId: string) {
       throw error
     }
     await fetchMembers()
+
+    // 초대 이메일 발송 (실패해도 추가 자체는 성공으로 처리)
+    if (inviteOptions) {
+      supabase.functions.invoke('send-member-invite', {
+        body: {
+          to:          email,
+          projectName: inviteOptions.projectName,
+          projectId,
+          inviterName: inviteOptions.inviterName,
+          role,
+        },
+      }).catch(() => { /* 이메일 실패는 무시 */ })
+    }
   }, [projectId, fetchMembers])
 
   /** 역할 변경 */

@@ -85,7 +85,16 @@ export default function MemberManage() {
     try {
       const found = await findUserByEmail(email)
       if (!found) { setAddError('해당 이메일로 가입된 계정이 없습니다.'); return }
-      await addMember(found.id, found.email, role, displayName || found.display_name || undefined)
+      await addMember(
+        found.id,
+        found.email,
+        role,
+        displayName || found.display_name || undefined,
+        {
+          projectName: project?.name ?? '프로젝트',
+          inviterName: user?.email?.split('@')[0] ?? '팀원',
+        },
+      )
       setEmail('')
       setDisplayName('')
       setRole('member')
