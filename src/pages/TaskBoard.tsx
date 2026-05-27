@@ -399,7 +399,8 @@ export default function TaskBoard() {
   const toggleCollapse = (code: string) =>
     setCollapsed(prev => {
       const s = new Set(prev)
-      s.has(code) ? s.delete(code) : s.add(code)
+      if (s.has(code)) s.delete(code)
+      else s.add(code)
       return s
     })
 

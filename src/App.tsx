@@ -16,8 +16,8 @@ function ProtectedRoute() {
   const { user, loading } = useAuth()
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-sm text-gray-400">로딩 중...</div>
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <div className="text-sm text-content-subtle">로딩 중...</div>
       </div>
     )
   }
