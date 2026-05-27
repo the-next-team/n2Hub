@@ -4,6 +4,7 @@ import { Plus, Search, Building2, Calendar, ChevronRight, FolderKanban } from 'l
 import { useProjects } from '../hooks/useProject'
 import { formatDate } from '../utils'
 import type { Project } from '../types'
+import { Button, Badge, Card, PageHeader } from '../components/ui'
 
 type CreateInput = {
   name: string
@@ -32,21 +33,17 @@ export default function ProjectList() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-content">프로젝트</h1>
-          <p className="text-content-muted mt-1">
-            {loading ? '불러오는 중...' : `${projects.length}개의 프로젝트`}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors"
-        >
-          <Plus size={16} />
-          새 프로젝트
-        </button>
-      </div>
+      <PageHeader
+        className="mb-6"
+        title="프로젝트"
+        description={loading ? '불러오는 중...' : `${projects.length}개의 프로젝트`}
+        actions={
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={16} />
+            새 프로젝트
+          </Button>
+        }
+      />
 
       <div className="relative mb-6">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
@@ -62,11 +59,11 @@ export default function ProjectList() {
       {loading ? (
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-surface rounded-xl border border-line p-5 animate-pulse">
+            <Card key={i} className="p-5 animate-pulse">
               <div className="h-5 bg-surface-hover rounded w-3/4 mb-3" />
               <div className="h-4 bg-surface-hover rounded w-1/2 mb-2" />
               <div className="h-4 bg-surface-hover rounded w-2/3" />
-            </div>
+            </Card>
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -90,17 +87,15 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       to={`/projects/${project.id}`}
-      className="bg-surface rounded-xl border border-line p-5 hover:border-blue-300 hover:shadow-sm transition-all group flex flex-col"
+      className="bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col"
     >
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-content group-hover:text-primary transition-colors leading-tight pr-2">
           {project.name}
         </h3>
-        <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
-          project.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-surface-hover text-content-muted'
-        }`}>
+        <Badge tone={project.status === 'active' ? 'green' : 'gray'} className="shrink-0">
           {project.status === 'active' ? '진행중' : '완료'}
-        </span>
+        </Badge>
       </div>
 
       <div className="space-y-1.5 flex-1">
@@ -121,7 +116,7 @@ function ProjectCard({ project }: { project: Project }) {
         )}
       </div>
 
-      <div className="flex items-center justify-end mt-4 text-xs text-content-subtle group-hover:text-blue-400 transition-colors">
+      <div className="flex items-center justify-end mt-4 text-xs text-content-subtle group-hover:text-primary transition-colors">
         산출물 보기 <ChevronRight size={14} />
       </div>
     </Link>
@@ -130,7 +125,7 @@ function ProjectCard({ project }: { project: Project }) {
 
 function EmptyState({ search, onNew }: { search: string; onNew: () => void }) {
   return (
-    <div className="bg-surface rounded-xl border border-line p-16 text-center">
+    <Card className="p-16 text-center">
       <div className="inline-flex p-4 bg-surface-hover rounded-full mb-4">
         <FolderKanban size={32} className="text-content-subtle" />
       </div>
@@ -138,15 +133,12 @@ function EmptyState({ search, onNew }: { search: string; onNew: () => void }) {
         {search ? '검색 결과가 없습니다.' : '아직 프로젝트가 없습니다.'}
       </p>
       {!search && (
-        <button
-          onClick={onNew}
-          className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-        >
+        <Button onClick={onNew} className="mt-4">
           <Plus size={14} />
           첫 번째 프로젝트 만들기
-        </button>
+        </Button>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -245,23 +237,15 @@ function CreateProjectModal({
             />
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400 px-3 py-2 rounded-lg">{error}</p>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-content-muted border border-line rounded-lg hover:bg-surface-hover transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               취소
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !form.name.trim()}
-              className="px-4 py-2 text-sm bg-primary text-white rounded-lg font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button type="submit" disabled={loading || !form.name.trim()}>
               {loading ? '생성 중...' : '프로젝트 생성'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
