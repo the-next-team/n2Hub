@@ -20,26 +20,34 @@ export function useMembers(projectId: string) {
     setLoading(true)
     setError(null)
     try {
-      // project_members + profiles 조인
-      const { data, error } = await supabase
+      // 1) project_members 조회
+      const { data: memberRows, error: memberErr } = await supabase
         .from('project_members')
-        .select(`
-          id, project_id, user_id, role, display_name, created_at,
-          profiles ( email )
-        `)
+        .select('id, project_id, user_id, role, display_name, created_at')
         .eq('project_id', projectId)
         .order('created_at')
+      if (memberErr) throw memberErr
 
-      if (error) throw error
+      const rows = memberRows ?? []
+      if (rows.length === 0) { setMembers([]); return }
+
+      // 2) profiles에서 이메일 별도 조회 (FK 관계 불필요)
+      const userIds = rows.map(r => r.user_id)
+      const { data: profileRows } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds)
+      const emailMap: Record<string, string> = {}
+      for (const p of profileRows ?? []) emailMap[p.id] = p.email
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setMembers((data ?? []).map((r: any) => ({
+      setMembers(rows.map((r: any) => ({
         id: r.id,
         project_id: r.project_id,
         user_id: r.user_id,
         role: r.role,
         display_name: r.display_name,
-        email: r.profiles?.email ?? '',
+        email: emailMap[r.user_id] ?? '',
         created_at: r.created_at,
       })))
     } catch (err) {
