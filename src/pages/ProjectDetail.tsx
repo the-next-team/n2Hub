@@ -3,6 +3,7 @@ import { FileText, Users, Building2, Calendar, ChevronRight, ClipboardList } fro
 import { useProject } from '../hooks/useProject'
 import { useDocuments } from '../hooks/useDocument'
 import { formatDate } from '../utils'
+import { Badge, Card, PageHeader } from '../components/ui'
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
@@ -35,21 +36,18 @@ export default function ProjectDetail() {
         <span className="text-content">{project.name}</span>
       </div>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-content">{project.name}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              project.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-surface-hover text-content-muted'
-            }`}>
+      <PageHeader
+        className="mb-6"
+        title={
+          <span className="flex items-center gap-3">
+            {project.name}
+            <Badge tone={project.status === 'active' ? 'green' : 'gray'}>
               {project.status === 'active' ? '진행중' : '완료'}
-            </span>
-          </div>
-          {project.description && (
-            <p className="text-content-muted text-sm">{project.description}</p>
-          )}
-        </div>
-      </div>
+            </Badge>
+          </span>
+        }
+        description={project.description || undefined}
+      />
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         {project.clientName && (
@@ -69,30 +67,30 @@ export default function ProjectDetail() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface rounded-xl border border-line p-4 text-center">
+        <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-content">
             {docsLoading ? '-' : documents.length}
           </div>
           <div className="text-sm text-content-muted mt-1">전체 산출물</div>
-        </div>
-        <div className="bg-surface rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-bold text-orange-600">
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
             {docsLoading ? '-' : activeCount}
           </div>
           <div className="text-sm text-content-muted mt-1">진행중</div>
-        </div>
-        <div className="bg-surface rounded-xl border border-line p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {docsLoading ? '-' : doneCount}
           </div>
           <div className="text-sm text-content-muted mt-1">완료</div>
-        </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <Link
           to={`/projects/${id}/documents`}
-          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-blue-300 hover:shadow-sm transition-all"
+          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-sm transition-all"
         >
           <div className="p-3 bg-primary-soft rounded-lg text-primary">
             <FileText size={20} />
@@ -108,9 +106,9 @@ export default function ProjectDetail() {
 
         <Link
           to={`/projects/${id}/tasks`}
-          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-orange-300 hover:shadow-sm transition-all"
+          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-orange-300 dark:hover:border-orange-500/40 hover:shadow-sm transition-all"
         >
-          <div className="p-3 bg-orange-50 rounded-lg text-orange-600">
+          <div className="p-3 bg-orange-50 dark:bg-orange-500/15 rounded-lg text-orange-600 dark:text-orange-400">
             <ClipboardList size={20} />
           </div>
           <div>
@@ -120,15 +118,15 @@ export default function ProjectDetail() {
           <ChevronRight size={16} className="text-content-subtle ml-auto" />
         </Link>
 
-        <div className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 opacity-60 cursor-not-allowed">
-          <div className="p-3 bg-purple-50 rounded-lg text-purple-600">
+        <Card className="flex items-center gap-4 p-5 opacity-60 cursor-not-allowed">
+          <div className="p-3 bg-purple-50 dark:bg-purple-500/15 rounded-lg text-purple-600 dark:text-purple-400">
             <Users size={20} />
           </div>
           <div>
             <div className="font-medium text-content">멤버</div>
             <div className="text-sm text-content-muted mt-0.5">팀원을 관리하세요</div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

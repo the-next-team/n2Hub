@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { useDocument } from '../hooks/useDocument'
 import { useAI } from '../hooks/useAI'
 import { printDocument } from '../lib/pdf'
+import { Button } from '../components/ui'
 
 function markdownToHtml(md: string): string {
   return md
@@ -153,19 +154,15 @@ export default function DocumentEditor() {
           </button>
           <button
             onClick={() => { reset(); setDocumentType(''); setShowAIModal(true) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 dark:text-purple-400 dark:border-purple-500/30 dark:hover:bg-purple-500/10 transition-colors"
           >
             <Sparkles size={14} />
             AI 초안
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
-          >
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
             <Save size={14} />
             {isSaving ? '저장 중...' : '버전 저장'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -223,7 +220,7 @@ export default function DocumentEditor() {
                     <div
                       key={v.id}
                       className={`p-2.5 rounded-lg border transition-colors cursor-pointer ${
-                        i === 0 ? 'border-blue-200 bg-primary-soft' : 'border-line hover:border-line'
+                        i === 0 ? 'border-primary/40 bg-primary-soft' : 'border-line hover:border-content-subtle'
                       }`}
                       onClick={() => {
                         if (editor && v.contentJson) {
@@ -292,7 +289,7 @@ export default function DocumentEditor() {
                         className={`px-3 py-1 text-xs rounded-full transition-colors ${
                           documentType === type
                             ? 'bg-purple-600 text-white'
-                            : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                            : 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-500/15 dark:text-purple-300 dark:hover:bg-purple-500/25'
                         }`}
                       >
                         {type}
@@ -311,12 +308,9 @@ export default function DocumentEditor() {
             </div>
 
             <div className="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0">
-              <button
-                onClick={() => { setShowAIModal(false); reset() }}
-                className="px-4 py-2 text-sm text-content-muted border border-line rounded-lg hover:bg-surface-hover transition-colors"
-              >
+              <Button variant="secondary" onClick={() => { setShowAIModal(false); reset() }}>
                 닫기
-              </button>
+              </Button>
               {!generatedText ? (
                 <button
                   onClick={handleAIGenerate}
@@ -327,13 +321,9 @@ export default function DocumentEditor() {
                   {isGenerating ? '생성 중...' : '생성하기'}
                 </button>
               ) : (
-                <button
-                  onClick={insertAIContent}
-                  disabled={isGenerating}
-                  className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
-                >
+                <Button onClick={insertAIContent} disabled={isGenerating}>
                   에디터에 삽입
-                </button>
+                </Button>
               )}
             </div>
           </div>

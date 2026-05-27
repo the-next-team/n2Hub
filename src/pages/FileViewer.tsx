@@ -4,6 +4,7 @@ import { ChevronRight, Download, Loader2, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SpreadsheetEditor from '../components/editor/SpreadsheetEditor'
 import DocEditor from '../components/editor/DocEditor'
+import { Button } from '../components/ui'
 
 interface FileMeta {
   id: string
@@ -115,13 +116,10 @@ export default function FileViewer() {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4">
         <p className="text-red-500 text-sm">{error ?? '알 수 없는 오류'}</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 text-sm border border-line rounded-lg hover:bg-surface-hover"
-        >
+        <Button variant="secondary" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} />
           돌아가기
-        </button>
+        </Button>
       </div>
     )
   }
@@ -172,13 +170,10 @@ export default function FileViewer() {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface shrink-0">
               <span className="text-sm font-medium text-content truncate">{meta.original_name}</span>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-content-muted border border-line rounded-lg hover:bg-surface-hover"
-              >
+              <Button variant="secondary" size="sm" onClick={handleDownload}>
                 <Download size={14} />
                 다운로드
-              </button>
+              </Button>
             </div>
             <div className="flex-1 min-h-0">
               <iframe
@@ -192,13 +187,10 @@ export default function FileViewer() {
         {fileType === 'other' && (
           <div className="flex flex-col h-full items-center justify-center gap-4 text-content-muted">
             <p className="text-sm">이 파일 형식은 브라우저에서 미리볼 수 없습니다.</p>
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover"
-            >
+            <Button onClick={handleDownload}>
               <Download size={14} />
               파일 다운로드
-            </button>
+            </Button>
           </div>
         )}
       </div>

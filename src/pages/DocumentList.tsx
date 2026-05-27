@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useFiles } from '../hooks/useFiles'
 import type { StorageItem } from '../hooks/useFiles'
+import { Button, PageHeader } from '../components/ui'
 
 const ACCEPT_TYPES = '.docx,.xlsx,.pptx,.pdf,.hwp,.doc,.xls,.ppt,.zip,.png,.jpg,.jpeg'
 
@@ -34,7 +35,7 @@ function formatDate(iso?: string): string {
 
 function FileIcon({ name, mimeType }: { name: string; mimeType?: string }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="text-blue-500" />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="text-primary" />
   if (ext === 'xlsx' || ext === 'xls') return <FileSpreadsheet size={18} className="text-green-500" />
   if (ext === 'pptx' || ext === 'ppt') return <Presentation size={18} className="text-orange-500" />
   if (ext === 'pdf' || mimeType === 'application/pdf') return <FileText size={18} className="text-red-500" />
@@ -105,38 +106,30 @@ export default function DocumentList() {
       </div>
 
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-content">산출물 목록</h1>
-          <p className="text-content-muted mt-1">
-            {loading ? '불러오는 중...' : `폴더 ${folders.length}개 · 파일 ${files.length}개`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNewFolder(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-line text-content rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors"
-          >
-            <FolderPlus size={16} />
-            새 폴더
-          </button>
-          <button
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-          >
-            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-            {uploading ? '업로드 중...' : '파일 올리기'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        className="mb-4"
+        title="산출물 목록"
+        description={loading ? '불러오는 중...' : `폴더 ${folders.length}개 · 파일 ${files.length}개`}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowNewFolder(true)}>
+              <FolderPlus size={16} />
+              새 폴더
+            </Button>
+            <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {uploading ? '업로드 중...' : '파일 올리기'}
+            </Button>
+          </>
+        }
+      />
 
       {/* 숨김 input */}
       <input ref={inputRef} type="file" multiple accept={ACCEPT_TYPES} className="hidden" onChange={handleInputChange} />
 
       {/* 에러 */}
       {error && (
-        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">{error}</div>
+        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">{error}</div>
       )}
 
       {/* 새 폴더 입력 */}
@@ -148,22 +141,14 @@ export default function DocumentList() {
             value={newFolderName}
             onChange={e => setNewFolderName(e.target.value)}
             placeholder="폴더명 입력..."
-            className="px-3 py-2 border border-blue-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
+            className="px-3 py-2 border border-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
           />
-          <button
-            type="submit"
-            disabled={creatingFolder || !newFolderName.trim()}
-            className="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50"
-          >
+          <Button type="submit" size="sm" disabled={creatingFolder || !newFolderName.trim()}>
             {creatingFolder ? <Loader2 size={14} className="animate-spin" /> : '생성'}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowNewFolder(false); setNewFolderName('') }}
-            className="px-3 py-2 text-sm text-content-muted hover:text-content"
-          >
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNewFolder(false); setNewFolderName('') }}>
             취소
-          </button>
+          </Button>
         </form>
       )}
 
@@ -173,7 +158,7 @@ export default function DocumentList() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={`rounded-xl border-2 transition-colors overflow-hidden ${
-          dragOver ? 'border-blue-400 bg-primary-soft' : 'border-line bg-surface'
+          dragOver ? 'border-primary bg-primary-soft' : 'border-line bg-surface'
         }`}
       >
         {/* 경로 바 */}
@@ -205,7 +190,7 @@ export default function DocumentList() {
           </div>
         ) : items.length === 0 ? (
           <div className="py-20 flex flex-col items-center gap-3 text-center">
-            <Upload size={40} className={dragOver ? 'text-blue-400' : 'text-content-subtle'} />
+            <Upload size={40} className={dragOver ? 'text-primary' : 'text-content-subtle'} />
             <p className="text-content-subtle font-medium">
               {dragOver ? '놓아서 업로드' : '비어있습니다'}
             </p>
@@ -257,7 +242,7 @@ export default function DocumentList() {
 
         {/* 드래그 오버레이 안내 */}
         {dragOver && items.length > 0 && (
-          <div className="px-4 py-3 text-center text-sm text-blue-500 font-medium border-t border-blue-100 bg-primary-soft">
+          <div className="px-4 py-3 text-center text-sm text-primary font-medium border-t border-primary/20 bg-primary-soft">
             현재 폴더에 파일을 업로드합니다
           </div>
         )}

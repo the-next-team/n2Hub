@@ -10,6 +10,7 @@ import { useTasks } from '../hooks/useTasks'
 import { useProject } from '../hooks/useProject'
 import { parseWbsBuffer } from '../utils/wbsParser'
 import type { Task } from '../hooks/useTasks'
+import { Button, PageHeader } from '../components/ui'
 
 // ---------- 상수 ----------
 const STATUS_LABEL: Record<Task['status'], string> = {
@@ -20,9 +21,9 @@ const STATUS_LABEL: Record<Task['status'], string> = {
 }
 const STATUS_COLOR: Record<Task['status'], string> = {
   not_started: 'bg-surface-hover text-content-muted',
-  in_progress: 'bg-blue-100 text-primary',
-  completed:   'bg-green-100 text-green-700',
-  delayed:     'bg-red-100 text-red-700',
+  in_progress: 'bg-primary-soft text-primary',
+  completed:   'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400',
+  delayed:     'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
 }
 const STATUS_ICON: Record<Task['status'], React.ReactNode> = {
   not_started: <Clock size={12} />,
@@ -102,7 +103,7 @@ function TaskRow({
             <input
               type="range" min={0} max={100} value={progress}
               onChange={e => setProgress(Number(e.target.value))}
-              className="flex-1 accent-blue-600"
+              className="flex-1 accent-primary"
             />
             <span className="text-xs font-mono w-9 text-right text-content">{progress}%</span>
           </div>
@@ -119,7 +120,7 @@ function TaskRow({
               />
               <div
                 className={`absolute h-full rounded-full ${
-                  task.actual_progress >= task.planned_progress ? 'bg-green-500' : 'bg-blue-500'
+                  task.actual_progress >= task.planned_progress ? 'bg-green-500' : 'bg-primary'
                 }`}
                 style={{ width: pct(task.actual_progress) }}
               />
@@ -179,7 +180,7 @@ function TaskRow({
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-primary border border-blue-200 rounded hover:bg-primary-soft"
+            className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-primary border border-primary/30 rounded hover:bg-primary-soft"
           >
             수정
           </button>
@@ -211,10 +212,10 @@ function GroupRow({
       className={`cursor-pointer ${level === 1 ? 'bg-primary-soft hover:bg-primary-soft' : 'bg-canvas hover:bg-surface-hover'}`}
       onClick={onToggle}
     >
-      <td className={`py-3 font-mono text-xs ${level === 1 ? 'pl-4 text-blue-500' : 'pl-6 text-content-subtle'}`}>
+      <td className={`py-3 font-mono text-xs ${level === 1 ? 'pl-4 text-primary' : 'pl-6 text-content-subtle'}`}>
         {code}
       </td>
-      <td className={`px-3 py-3 font-semibold ${level === 1 ? 'text-blue-800 text-sm' : 'text-content text-sm'}`}>
+      <td className={`px-3 py-3 font-semibold ${level === 1 ? 'text-primary text-sm' : 'text-content text-sm'}`}>
         {expanded ? <ChevronDown size={14} className="inline mr-1" /> : <ChevronUp size={14} className="inline mr-1" />}
         {name}
       </td>
@@ -227,7 +228,7 @@ function GroupRow({
           </div>
           <div className="h-1.5 bg-surface-hover rounded-full overflow-hidden relative">
             <div className="absolute h-full bg-surface-hover rounded-full" style={{ width: pct(avgPlan) }} />
-            <div className={`absolute h-full rounded-full ${avgActual >= avgPlan ? 'bg-green-400' : 'bg-blue-400'}`} style={{ width: pct(avgActual) }} />
+            <div className={`absolute h-full rounded-full ${avgActual >= avgPlan ? 'bg-green-400' : 'bg-primary'}`} style={{ width: pct(avgActual) }} />
           </div>
         </div>
       </td>
@@ -330,10 +331,10 @@ function ImportModal({
                   key={f.id}
                   onClick={() => handleSelect(f)}
                   disabled={downloading !== null}
-                  className="w-full flex items-center gap-3 px-4 py-3 border border-line rounded-xl hover:border-blue-400 hover:bg-primary-soft transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-4 py-3 border border-line rounded-xl hover:border-primary hover:bg-primary-soft transition-colors text-left disabled:opacity-50"
                 >
                   {downloading === f.id
-                    ? <Loader2 size={18} className="animate-spin text-blue-500 shrink-0" />
+                    ? <Loader2 size={18} className="animate-spin text-primary shrink-0" />
                     : <FileSpreadsheet size={18} className="text-green-500 shrink-0" />
                   }
                   <div className="min-w-0">
@@ -430,29 +431,26 @@ export default function TaskBoard() {
       </div>
 
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-content flex items-center gap-2">
+      <PageHeader
+        className="mb-6"
+        title={
+          <span className="flex items-center gap-2">
             <ClipboardList size={22} className="text-primary" />
             WBS 작업 관리
-          </h1>
-          <p className="text-content-muted text-sm mt-1">
-            WBS 파일에서 가져온 작업 목록으로 담당자별 일정을 관리합니다.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowImport(true)}
-          disabled={importing}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-        >
-          {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-          {importing ? '가져오는 중...' : 'WBS 가져오기'}
-        </button>
-      </div>
+          </span>
+        }
+        description="WBS 파일에서 가져온 작업 목록으로 담당자별 일정을 관리합니다."
+        actions={
+          <Button onClick={() => setShowImport(true)} disabled={importing}>
+            {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+            {importing ? '가져오는 중...' : 'WBS 가져오기'}
+          </Button>
+        }
+      />
 
       {/* 에러 */}
       {(error || importError) && (
-        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 flex items-center gap-2">
+        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30 flex items-center gap-2">
           <AlertCircle size={15} />
           {error || importError}
         </div>
@@ -462,9 +460,9 @@ export default function TaskBoard() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: '전체 작업', value: stats.total, color: 'text-content', bg: 'bg-surface' },
-          { label: '완료', value: stats.done, color: 'text-green-700', bg: 'bg-green-50' },
+          { label: '완료', value: stats.done, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
           { label: '진행중', value: stats.active, color: 'text-primary', bg: 'bg-primary-soft' },
-          { label: '지연', value: stats.delayed, color: 'text-red-700', bg: 'bg-red-50' },
+          { label: '지연', value: stats.delayed, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-xl border border-line p-4 text-center`}>
             <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
@@ -526,12 +524,9 @@ export default function TaskBoard() {
               "WBS 가져오기" 버튼을 눌러 산출물 목록에 업로드된<br />
               Excel WBS 파일에서 작업을 가져오세요.
             </p>
-            <button
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
-            >
+            <Button onClick={() => setShowImport(true)}>
               <Upload size={15} /> WBS 가져오기
-            </button>
+            </Button>
           </div>
         ) : (
           <table className="w-full text-sm">
