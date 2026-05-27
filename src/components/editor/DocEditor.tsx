@@ -35,7 +35,7 @@ export default function DocEditor({ fileName, buffer, onDownload, onSave }: Prop
   }, [onSave])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="light-island flex flex-col h-full bg-canvas">
       {/* 툴바 */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface shrink-0 gap-3">
         <span className="text-sm font-medium text-content-muted truncate max-w-xs hidden md:block">

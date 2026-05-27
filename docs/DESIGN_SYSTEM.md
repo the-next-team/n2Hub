@@ -93,7 +93,14 @@
 - 클래스 기반: `<html class="dark">` (`@custom-variant dark`).
 - 토글 상태는 `localStorage('n2hub-theme')`에 저장, `index.html`의 anti-FOUC 스크립트가 초기 적용.
 - Topbar의 토글 버튼이 `documentElement`의 `.dark`를 제어.
-- 콘텐츠는 토큰으로 자동 전환. 단, **서드파티 편집기**(FortuneSheet 그리드, DocxEditor)의 내부 UI는 자체 CSS라 토큰을 따르지 않음(알려진 한계).
+- 콘텐츠는 토큰으로 자동 전환.
+
+### 서드파티 편집기 — 라이트 아일랜드
+FortuneSheet는 그리드를 **canvas로 페인트**해 CSS로 셀 색을 못 바꾸고, 문서 편집기도 용지는 흰색이 자연스럽습니다. 부분 다크(다크 툴바 + 흰 그리드)는 깨져 보이므로, 편집 영역을 **다크모드에서도 일관된 라이트 작업면**으로 렌더합니다.
+
+- `.light-island` 클래스(`src/index.css`)가 뉴트럴 토큰을 라이트로 재선언 → 하위 트리(우리 툴바 포함) 전체가 라이트.
+- 적용: `DocEditor`, `SpreadsheetEditor` 루트. (페이지 상단 n2Hub 네비/브레드크럼은 다크 유지)
+- 서드파티 내부 클래스에 의존하지 않아 견고함. 새 서드파티 편집기도 래퍼에 `light-island`만 붙이면 됨.
 
 ---
 

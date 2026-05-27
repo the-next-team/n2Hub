@@ -92,6 +92,29 @@
   --danger-soft: rgb(239 68 68 / 0.15);
 }
 
+/* 라이트 아일랜드 — 서드파티 편집기(canvas 그리드/문서 용지)는 다크화가 불가하거나
+   부자연스러워, 해당 영역을 다크모드에서도 일관된 라이트 작업면으로 렌더한다.
+   뉴트럴 토큰을 라이트로 재선언하면 하위 트리(우리 툴바 포함)가 모두 라이트가 된다. */
+.light-island {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef2ff;
+  --canvas: #fafafa;
+  --surface: #ffffff;
+  --surface-hover: #f4f4f5;
+  --line: #e8e8ec;
+  --content: #18181b;
+  --content-muted: #71717a;
+  --content-subtle: #a1a1aa;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #c2410c;
+  --warning-soft: #ffedd5;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  color-scheme: light;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
