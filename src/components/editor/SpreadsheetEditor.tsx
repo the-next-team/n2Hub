@@ -4,6 +4,7 @@ import '@fortune-sheet/react/dist/index.css'
 import * as XLSX from 'xlsx'
 import { Save, Download, Loader2, FileEdit, RefreshCw, CheckCircle2, Wifi } from 'lucide-react'
 import { useGoogleDrive } from '../../hooks/useGoogleDrive'
+import { Button } from '../ui'
 
 // SheetJS 워크북 → FortuneSheet 형식 변환
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,24 +124,20 @@ export default function SpreadsheetEditor({ fileName, buffer, onSave, onDownload
   return (
     <div className="flex flex-col h-full">
       {/* 툴바 */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white shrink-0 gap-2 flex-wrap">
-        <span className="text-sm font-medium text-gray-700 truncate max-w-xs hidden md:block">{fileName}</span>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface shrink-0 gap-2 flex-wrap">
+        <span className="text-sm font-medium text-content-muted truncate max-w-xs hidden md:block">{fileName}</span>
         <div className="flex items-center gap-2 ml-auto flex-wrap">
-          {driveError && <span className="text-xs text-red-500 max-w-xs truncate">{driveError}</span>}
+          {driveError && <span className="text-xs text-danger max-w-xs truncate">{driveError}</span>}
 
           {/* 지금 동기화 (Google Sheets 연결 중일 때) */}
           {driveFileId && (
-            <button
-              onClick={syncNow}
-              disabled={syncing || working}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
+            <Button variant="secondary" size="sm" onClick={syncNow} disabled={syncing || working}>
               <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
               지금 동기화
-            </button>
+            </Button>
           )}
 
-          {/* Google Sheets로 편집 */}
+          {/* Google Sheets로 편집 — emerald 는 Google 브랜드 어포던스 */}
           <button
             onClick={handleOpenInSheets}
             disabled={working}
@@ -150,40 +147,33 @@ export default function SpreadsheetEditor({ fileName, buffer, onSave, onDownload
             {working ? '업로드 중...' : driveFileId ? 'Google Sheets 다시 열기' : 'Google Sheets로 편집'}
           </button>
 
-          <div className="w-px h-5 bg-gray-200" />
+          <div className="w-px h-5 bg-line" />
 
-          <button
-            onClick={onDownload}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <Button variant="secondary" size="sm" onClick={onDownload}>
             <Download size={14} />
             원본 다운로드
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? '저장 중...' : saved ? '저장됨 ✓' : '저장'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 자동 동기화 상태 배너 */}
       {autoSync && (
-        <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-700 flex items-center justify-between">
+        <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wifi size={13} className="text-emerald-500" />
             <span>Google Sheets 자동 동기화 중 <span className="text-emerald-400">(30초마다)</span></span>
             {syncing && (
-              <span className="flex items-center gap-1 text-green-600 font-medium">
+              <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
                 <Loader2 size={11} className="animate-spin" /> 동기화 중...
               </span>
             )}
           </div>
           {lastSynced && (
-            <span className="flex items-center gap-1 text-emerald-600">
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={12} />
               마지막 동기화: {timeAgo(lastSynced)}
             </span>
