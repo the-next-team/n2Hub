@@ -270,6 +270,7 @@ function FolderRow({ item, onOpen, onDelete }: {
         <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onDelete(item) }}
+            aria-label="삭제"
             title="삭제"
             className="p-1.5 text-content-subtle hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
           >
@@ -311,6 +312,7 @@ function FileRow({ item, onDownload, onDelete, onOpen }: {
         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onOpen() }}
+            aria-label="열기"
             title="열기"
             className="p-1.5 text-content-subtle hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
           >
@@ -318,6 +320,7 @@ function FileRow({ item, onDownload, onDelete, onOpen }: {
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDownload(item) }}
+            aria-label="다운로드"
             title="다운로드"
             className="p-1.5 text-content-subtle hover:text-primary hover:bg-primary-soft rounded-md transition-colors"
           >
@@ -325,6 +328,7 @@ function FileRow({ item, onDownload, onDelete, onOpen }: {
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(item) }}
+            aria-label="삭제"
             title="삭제"
             className="p-1.5 text-content-subtle hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
           >

@@ -108,6 +108,9 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
+        aria-label="사용자 메뉴"
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="flex items-center gap-2 rounded-lg p-1 pr-2 transition-colors hover:bg-surface-hover"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">

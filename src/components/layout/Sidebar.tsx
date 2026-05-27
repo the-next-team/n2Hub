@@ -77,6 +77,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                   key={to}
                   to={to}
                   onClick={onCloseMobile}
+                  aria-label={label}
                   title={collapsed ? label : undefined}
                   className={({ isActive }) =>
                     cn(
@@ -104,6 +105,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-content-muted transition-colors hover:bg-surface-hover hover:text-content',
             collapsed && 'justify-center px-0',
           )}
+          aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
           title={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
         >
           {collapsed ? (

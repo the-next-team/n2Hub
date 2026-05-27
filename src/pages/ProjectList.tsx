@@ -178,7 +178,7 @@ function CreateProjectModal({
       <div className="bg-surface rounded-xl shadow-modal w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 className="text-lg font-semibold text-content">새 프로젝트</h2>
-          <button onClick={onClose} className="text-content-subtle hover:text-content-muted text-2xl leading-none">&times;</button>
+          <button onClick={onClose} aria-label="닫기" className="text-content-subtle hover:text-content-muted text-2xl leading-none">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>

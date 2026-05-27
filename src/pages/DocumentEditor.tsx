@@ -141,6 +141,8 @@ export default function DocumentEditor() {
           <button
             onClick={() => setShowVersions(!showVersions)}
             className={`p-1.5 rounded-lg transition-colors ${showVersions ? 'bg-surface-hover text-content' : 'text-content-subtle hover:text-content-muted hover:bg-surface-hover'}`}
+            aria-label="버전 이력"
+            aria-pressed={showVersions}
             title="버전 이력"
           >
             <History size={16} />
@@ -148,6 +150,7 @@ export default function DocumentEditor() {
           <button
             onClick={printDocument}
             className="p-1.5 text-content-subtle hover:text-content-muted hover:bg-surface-hover rounded-lg transition-colors"
+            aria-label="인쇄/PDF"
             title="인쇄/PDF"
           >
             <Printer size={16} />
@@ -260,6 +263,7 @@ export default function DocumentEditor() {
               </h2>
               <button
                 onClick={() => { setShowAIModal(false); reset() }}
+                aria-label="닫기"
                 className="text-content-subtle hover:text-content-muted text-2xl leading-none"
               >
                 &times;
@@ -347,6 +351,8 @@ function ToolbarBtn({
   return (
     <button
       onClick={onClick}
+      aria-label={title}
+      aria-pressed={active}
       title={title}
       className={`p-1.5 rounded transition-colors ${
         active ? 'bg-surface-hover text-content' : 'text-content-muted hover:bg-surface-hover hover:text-content'

@@ -302,7 +302,7 @@ function ImportModal({
       <div className="bg-surface rounded-2xl shadow-modal w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 className="text-lg font-semibold text-content">WBS 파일 선택</h2>
-          <button onClick={onClose} className="text-content-subtle hover:text-content-muted">
+          <button onClick={onClose} aria-label="닫기" className="text-content-subtle hover:text-content-muted">
             <X size={18} />
           </button>
         </div>
