@@ -37,7 +37,6 @@ export default function ProjectDetail() {
       </div>
 
       <PageHeader
-        className="mb-6"
         title={
           <span className="flex items-center gap-3">
             {project.name}

@@ -6,7 +6,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { useDocument } from '../hooks/useDocument'
 import { useAI } from '../hooks/useAI'
 import { printDocument } from '../lib/pdf'
-import { Button } from '../components/ui'
+import { Button, SectionTitle } from '../components/ui'
 
 function markdownToHtml(md: string): string {
   return md
@@ -209,7 +209,7 @@ export default function DocumentEditor() {
         {showVersions && (
           <div className="w-64 border-l border-line bg-surface shrink-0 flex flex-col">
             <div className="px-4 py-3 border-b border-line">
-              <h3 className="text-sm font-semibold text-content">버전 이력</h3>
+              <SectionTitle>버전 이력</SectionTitle>
             </div>
             <div className="overflow-auto flex-1 p-3">
               {versions.length === 0 ? (

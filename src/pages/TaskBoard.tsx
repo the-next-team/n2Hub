@@ -301,7 +301,7 @@ function ImportModal({
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
-          <h2 className="text-base font-semibold text-content">WBS 파일 선택</h2>
+          <h2 className="text-lg font-semibold text-content">WBS 파일 선택</h2>
           <button onClick={onClose} className="text-content-subtle hover:text-content-muted">
             <X size={18} />
           </button>
@@ -432,7 +432,6 @@ export default function TaskBoard() {
 
       {/* 헤더 */}
       <PageHeader
-        className="mb-6"
         title={
           <span className="flex items-center gap-2">
             <ClipboardList size={22} className="text-primary" />

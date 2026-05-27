@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { FolderKanban, FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react'
 import { useProjects } from '../hooks/useProject'
 import { formatDate } from '../utils'
-import { Card, PageHeader } from '../components/ui'
+import { Card, PageHeader, SectionTitle } from '../components/ui'
 
 export default function Dashboard() {
   const { projects, loading } = useProjects()
@@ -22,7 +22,6 @@ export default function Dashboard() {
   return (
     <div className="p-8">
       <PageHeader
-        className="mb-8"
         title="대시보드"
         description="내 프로젝트 현황을 한눈에 확인하세요."
       />
@@ -41,7 +40,7 @@ export default function Dashboard() {
 
       <Card>
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
-          <h2 className="font-semibold text-content">최근 프로젝트</h2>
+          <SectionTitle>최근 프로젝트</SectionTitle>
           <Link to="/projects" className="text-sm text-primary hover:underline flex items-center gap-1">
             전체 보기 <ChevronRight size={14} />
           </Link>

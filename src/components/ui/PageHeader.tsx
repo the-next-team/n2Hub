@@ -10,9 +10,9 @@ type Props = {
 
 export default function PageHeader({ title, description, actions, className }: Props) {
   return (
-    <div className={cn('flex items-start justify-between gap-4', className)}>
+    <div className={cn('mb-6 flex items-start justify-between gap-4', className)}>
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-content">{title}</h1>
+        <h1 className="text-2xl font-bold leading-tight text-content">{title}</h1>
         {description && <p className="mt-1 text-content-muted">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

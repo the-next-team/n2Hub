@@ -10,7 +10,7 @@ const sections = [
 export default function Settings() {
   return (
     <div className="p-8">
-      <PageHeader className="mb-6" title="설정" description="계정과 서비스를 설정하세요." />
+      <PageHeader title="설정" description="계정과 서비스를 설정하세요." />
       <div className="space-y-3 max-w-2xl">
         {sections.map(({ icon: Icon, label, desc }) => (
           <Card

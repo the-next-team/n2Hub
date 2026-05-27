@@ -107,7 +107,6 @@ export default function DocumentList() {
 
       {/* 헤더 */}
       <PageHeader
-        className="mb-4"
         title="산출물 목록"
         description={loading ? '불러오는 중...' : `폴더 ${folders.length}개 · 파일 ${files.length}개`}
         actions={

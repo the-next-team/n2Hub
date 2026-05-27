@@ -34,7 +34,6 @@ export default function ProjectList() {
   return (
     <div className="p-8">
       <PageHeader
-        className="mb-6"
         title="프로젝트"
         description={loading ? '불러오는 중...' : `${projects.length}개의 프로젝트`}
         actions={

@@ -7,7 +7,6 @@ export default function TemplateManager() {
   return (
     <div className="p-8">
       <PageHeader
-        className="mb-6"
         title="템플릿 관리"
         description="산출물 템플릿을 관리하세요."
         actions={

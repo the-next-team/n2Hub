@@ -66,8 +66,20 @@
   html {
     -webkit-text-size-adjust: 100%;
   }
+  /*
+    타이포 스케일 (디자인 시스템 표준)
+    ─────────────────────────────────────────────
+    페이지 타이틀  24px / 700 / leading-tight   → <PageHeader>
+    섹션 타이틀    16px / 600                   → <SectionTitle>
+    본문(기본)     14px / 1.6                   → body 상속 (text-sm 명시 불필요)
+    라벨/강조      14px / 500~600
+    캡션/메타      12px                         → text-xs
+    rem 유틸(text-2xl 등)은 html 16px 기준이라 본문 14px 변경에 영향 없음
+  */
   body {
     font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.6;
     background-color: var(--canvas);
     color: var(--content);
     -webkit-font-smoothing: antialiased;
