@@ -1,0 +1,184 @@
+name: Slack Notifications
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed, reopened]
+  push:
+    branches: [main, develop]
+  workflow_run:
+    workflows: [Code Review]
+    types: [completed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR 생성/수정 알림
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🔔 새로운 PR이 생성되었습니다",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🔔 *새로운 PR*\n*제목:* ${{ github.event.pull_request.title }}\n*작성자:* @${{ github.event.pull_request.user.login }}\n*브랜치:* `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*설명:*\n${{ github.event.pull_request.body }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "PR 보기"
+                      },
+                      "url": "${{ github.event.pull_request.html_url }}",
+                      "style": "primary"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: PR 머지 알림
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ PR이 머지되었습니다",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *PR 머지됨*\n*제목:* ${{ github.event.pull_request.title }}\n*머지된 브랜치:* `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`\n*머지한 사람:* @${{ github.event.pull_request.merged_by.login }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "PR 보기"
+                      },
+                      "url": "${{ github.event.pull_request.html_url }}",
+                      "style": "primary"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: main 브랜치 푸시 알림
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚀 프로덕션 배포 준비",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚀 *main 브랜치 업데이트*\n*커밋:* `${{ github.event.head_commit.id | slice: 0, 7 }}`\n*메시지:* ${{ github.event.head_commit.message }}\n*푸시한 사람:* ${{ github.event.pusher.name }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "커밋 보기"
+                      },
+                      "url": "${{ github.event.head_commit.url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: develop 브랜치 푸시 알림
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "📝 develop 브랜치 업데이트",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "📝 *develop 브랜치 업데이트*\n*커밋:* `${{ github.event.head_commit.id | slice: 0, 7 }}`\n*메시지:* ${{ github.event.head_commit.message }}\n*푸시한 사람:* ${{ github.event.pusher.name }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "커밋 보기"
+                      },
+                      "url": "${{ github.event.head_commit.url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: PR 리뷰 필요 알림
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🔄 PR이 업데이트되었습니다",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🔄 *PR 업데이트*\n*제목:* ${{ github.event.pull_request.title }}\n*작성자:* @${{ github.event.pull_request.user.login }}\n*상태:* 리뷰 대기 중"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "리뷰하기"
+                      },
+                      "url": "${{ github.event.pull_request.html_url }}",
+                      "style": "primary"
+                    }
+                  ]
+                }
+              ]
+            }
