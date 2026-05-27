@@ -1,0 +1,62 @@
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { AuthProvider, useAuth } from './lib/auth'
+import Layout from './components/layout/Layout'
+import Dashboard from './pages/Dashboard'
+import ProjectList from './pages/ProjectList'
+import ProjectDetail from './pages/ProjectDetail'
+import DocumentList from './pages/DocumentList'
+import DocumentEditor from './pages/DocumentEditor'
+import FileViewer from './pages/FileViewer'
+import TaskBoard from './pages/TaskBoard'
+import TemplateManager from './pages/TemplateManager'
+import Settings from './pages/Settings'
+import Login from './pages/Login'
+
+function ProtectedRoute() {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-sm text-gray-400">로딩 중...</div>
+      </div>
+    )
+  }
+  if (!user) return <Navigate to="/login" replace />
+  return <Outlet />
+}
+
+function GuestRoute() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  if (user) return <Navigate to="/dashboard" replace />
+  return <Outlet />
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<Login />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/projects" element={<ProjectList />} />
+              <Route path="/projects/new" element={<ProjectList />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/projects/:id/documents" element={<DocumentList />} />
+              <Route path="/projects/:id/view/:fileId" element={<FileViewer />} />
+              <Route path="/projects/:id/tasks" element={<TaskBoard />} />
+              <Route path="/documents/:docId" element={<DocumentEditor />} />
+              <Route path="/templates" element={<TemplateManager />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}

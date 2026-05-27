@@ -1,0 +1,43 @@
+{
+  "name": "n2hub",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@eigenpal/docx-editor-react": "^1.0.3",
+    "@fortune-sheet/react": "^1.0.4",
+    "@supabase/supabase-js": "^2",
+    "@tiptap/pm": "^2",
+    "@tiptap/react": "^2",
+    "@tiptap/starter-kit": "^2",
+    "docx-preview": "^0.3.7",
+    "lucide-react": "^0.469.0",
+    "mammoth": "^1.12.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-router-dom": "^7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@esbuild/win32-x64": "0.25.12",
+    "@eslint/js": "^9",
+    "@tailwindcss/vite": "^4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4",
+    "eslint": "^9",
+    "eslint-plugin-react-hooks": "^5",
+    "eslint-plugin-react-refresh": "^0.4",
+    "globals": "^15",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "typescript-eslint": "^8",
+    "vite": "^6"
+  }
+}
