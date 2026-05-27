@@ -34,7 +34,7 @@ export default function Login() {
   if (signUpDone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <div className="w-full max-w-md bg-surface rounded-xl shadow-sm border border-line p-8 text-center">
+        <div className="w-full max-w-md bg-surface rounded-xl shadow-card border border-line p-8 text-center">
           <div className="text-4xl mb-4">✉️</div>
           <h2 className="text-lg font-semibold text-content mb-2">이메일을 확인하세요</h2>
           <p className="text-sm text-content-muted mb-6">
@@ -54,7 +54,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas">
-      <div className="w-full max-w-md bg-surface rounded-xl shadow-sm border border-line p-8">
+      <div className="w-full max-w-md bg-surface rounded-xl shadow-card border border-line p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-content">n2Hub</h1>
           <p className="text-content-muted mt-1">IT 프로젝트 산출물 관리 플랫폼</p>

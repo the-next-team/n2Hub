@@ -89,7 +89,7 @@ export default function ProjectDetail() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <Link
           to={`/projects/${id}/documents`}
-          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-sm transition-all"
+          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-card transition-all"
         >
           <div className="p-3 bg-primary-soft rounded-lg text-primary">
             <FileText size={20} />
@@ -105,7 +105,7 @@ export default function ProjectDetail() {
 
         <Link
           to={`/projects/${id}/tasks`}
-          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-orange-300 dark:hover:border-orange-500/40 hover:shadow-sm transition-all"
+          className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-orange-300 dark:hover:border-orange-500/40 hover:shadow-card transition-all"
         >
           <div className="p-3 bg-orange-50 dark:bg-orange-500/15 rounded-lg text-orange-600 dark:text-orange-400">
             <ClipboardList size={20} />

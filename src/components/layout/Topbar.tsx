@@ -119,7 +119,7 @@ function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-popover">
           <div className="border-b border-line px-4 py-3">
             <p className="text-xs text-content-subtle">로그인 계정</p>
             <p className="truncate text-sm font-medium text-content">{user?.email}</p>

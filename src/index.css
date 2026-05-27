@@ -11,6 +11,14 @@
 
   /* 미니멀 프로페셔널 — 카드 10px, 컨트롤은 rounded-lg(8px) 유지 */
   --radius-xl: 0.625rem;
+
+  /* elevation — 보더 우선, 그림자는 절제
+     shadow-card    : 카드 hover·용지
+     shadow-popover : 드롭다운·메뉴
+     shadow-modal   : 다이얼로그 */
+  --shadow-card: 0 1px 2px 0 rgb(24 24 27 / 0.04), 0 1px 3px 0 rgb(24 24 27 / 0.06);
+  --shadow-popover: 0 4px 12px -2px rgb(24 24 27 / 0.1), 0 2px 6px -2px rgb(24 24 27 / 0.05);
+  --shadow-modal: 0 16px 40px -8px rgb(24 24 27 / 0.18), 0 4px 12px -4px rgb(24 24 27 / 0.08);
 }
 
 /* 시맨틱 컬러 토큰 — inline 으로 선언해 .dark 오버라이드가 유틸리티에 반영됨

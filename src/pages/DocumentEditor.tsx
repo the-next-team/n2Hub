@@ -199,7 +199,7 @@ export default function DocumentEditor() {
             <h1 className="text-2xl font-bold text-content mb-6 print:text-3xl">
               {document?.title}
             </h1>
-            <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+            <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-card">
               <EditorContent editor={editor} />
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function DocumentEditor() {
       {/* AI Modal */}
       {showAIModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[80vh]">
+          <div className="bg-surface rounded-xl shadow-modal w-full max-w-2xl flex flex-col max-h-[80vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
               <h2 className="text-lg font-semibold text-content flex items-center gap-2">
                 <Sparkles size={18} className="text-purple-600" />

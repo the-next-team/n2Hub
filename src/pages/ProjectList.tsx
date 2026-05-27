@@ -86,7 +86,7 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       to={`/projects/${project.id}`}
-      className="bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-sm transition-all group flex flex-col"
+      className="bg-surface rounded-xl border border-line p-5 hover:border-primary/40 hover:shadow-card transition-all group flex flex-col"
     >
       <div className="flex items-start justify-between mb-3">
         <h3 className="font-semibold text-content group-hover:text-primary transition-colors leading-tight pr-2">
@@ -175,7 +175,7 @@ function CreateProjectModal({
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg">
+      <div className="bg-surface rounded-xl shadow-modal w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
           <h2 className="text-lg font-semibold text-content">새 프로젝트</h2>
           <button onClick={onClose} className="text-content-subtle hover:text-content-muted text-2xl leading-none">&times;</button>
