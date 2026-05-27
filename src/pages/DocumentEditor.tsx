@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Save, Sparkles, ChevronRight, Clock, History, Bold, Italic, List, ListOrdered, Heading2, Quote, Minus, Printer } from 'lucide-react'
+import { Save, Sparkles, ChevronRight, Clock, History, Bold, Italic, List, ListOrdered, Heading2, Quote, Minus, Printer, X } from 'lucide-react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { useDocument } from '../hooks/useDocument'
@@ -264,9 +264,9 @@ export default function DocumentEditor() {
               <button
                 onClick={() => { setShowAIModal(false); reset() }}
                 aria-label="닫기"
-                className="text-content-subtle hover:text-content-muted text-2xl leading-none"
+                className="text-content-subtle hover:text-content-muted"
               >
-                &times;
+                <X size={18} />
               </button>
             </div>
 

@@ -274,6 +274,7 @@ pnpm lint             # ESLint 검사
 
 | 문서 | 설명 |
 |------|------|
+| [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 시스템 — 토큰·타이포·컴포넌트 규약 |
 | [GIT_FLOW.md](./GIT_FLOW.md) | Git 브랜치 관리 빠른 참조 |
 | [docs/GIT_WORKFLOW.md](./docs/GIT_WORKFLOW.md) | Git 워크플로우 상세 가이드 |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | 개발 환경 설정 및 팁 |

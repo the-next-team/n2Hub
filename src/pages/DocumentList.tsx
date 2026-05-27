@@ -140,7 +140,7 @@ export default function DocumentList() {
             value={newFolderName}
             onChange={e => setNewFolderName(e.target.value)}
             placeholder="폴더명 입력..."
-            className="px-3 py-2 border border-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
+            className="px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
           />
           <Button type="submit" size="sm" disabled={creatingFolder || !newFolderName.trim()}>
             {creatingFolder ? <Loader2 size={14} className="animate-spin" /> : '생성'}
