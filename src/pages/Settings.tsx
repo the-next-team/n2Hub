@@ -10,21 +10,21 @@ export default function Settings() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">설정</h1>
-        <p className="text-gray-500 mt-1">계정과 서비스를 설정하세요.</p>
+        <h1 className="text-2xl font-bold text-content">설정</h1>
+        <p className="text-content-muted mt-1">계정과 서비스를 설정하세요.</p>
       </div>
       <div className="space-y-3 max-w-2xl">
         {sections.map(({ icon: Icon, label, desc }) => (
           <div
             key={label}
-            className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 transition-colors cursor-pointer"
+            className="flex items-center gap-4 bg-surface rounded-xl border border-line p-5 hover:border-blue-300 transition-colors cursor-pointer"
           >
-            <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
+            <div className="p-2 bg-surface-hover rounded-lg text-content-muted">
               <Icon size={20} />
             </div>
             <div>
-              <div className="font-medium text-gray-900">{label}</div>
-              <div className="text-sm text-gray-500">{desc}</div>
+              <div className="font-medium text-content">{label}</div>
+              <div className="text-sm text-content-muted">{desc}</div>
             </div>
           </div>
         ))}

@@ -33,17 +33,17 @@ export default function Login() {
 
   if (signUpDone) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <div className="w-full max-w-md bg-surface rounded-xl shadow-sm border border-line p-8 text-center">
           <div className="text-4xl mb-4">✉️</div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">이메일을 확인하세요</h2>
-          <p className="text-sm text-gray-500 mb-6">
+          <h2 className="text-lg font-semibold text-content mb-2">이메일을 확인하세요</h2>
+          <p className="text-sm text-content-muted mb-6">
             {email} 으로 인증 링크를 보냈습니다.<br />
             이메일 확인 후 로그인해주세요.
           </p>
           <button
             onClick={() => { setIsSignUp(false); setSignUpDone(false) }}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-primary hover:underline"
           >
             로그인 화면으로
           </button>
@@ -53,33 +53,33 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-canvas">
+      <div className="w-full max-w-md bg-surface rounded-xl shadow-sm border border-line p-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">n2Hub</h1>
-          <p className="text-gray-500 mt-1">IT 프로젝트 산출물 관리 플랫폼</p>
+          <h1 className="text-2xl font-bold text-content">n2Hub</h1>
+          <p className="text-content-muted mt-1">IT 프로젝트 산출물 관리 플랫폼</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+            <label className="block text-sm font-medium text-content mb-1">이메일</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               placeholder="이메일을 입력하세요"
               required
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+            <label className="block text-sm font-medium text-content mb-1">비밀번호</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               placeholder="비밀번호를 입력하세요"
               required
             />
@@ -92,17 +92,17 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '처리 중...' : isSignUp ? '회원가입' : '로그인'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-6 text-center text-sm text-content-muted">
           {isSignUp ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}{' '}
           <button
             onClick={() => { setIsSignUp(!isSignUp); setError('') }}
-            className="text-blue-600 font-medium hover:underline"
+            className="text-primary font-medium hover:underline"
           >
             {isSignUp ? '로그인' : '회원가입'}
           </button>

@@ -104,7 +104,7 @@ export default function FileViewer() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen items-center justify-center gap-3 text-gray-400">
+      <div className="flex flex-col h-screen items-center justify-center gap-3 text-content-subtle">
         <Loader2 size={36} className="animate-spin" />
         <p className="text-sm">파일 불러오는 중...</p>
       </div>
@@ -117,7 +117,7 @@ export default function FileViewer() {
         <p className="text-red-500 text-sm">{error ?? '알 수 없는 오류'}</p>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="flex items-center gap-2 px-4 py-2 text-sm border border-line rounded-lg hover:bg-surface-hover"
         >
           <ArrowLeft size={14} />
           돌아가기
@@ -131,14 +131,14 @@ export default function FileViewer() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* 상단 브레드크럼 바 */}
-      <div className="flex items-center gap-2 text-xs text-gray-500 px-4 py-2 border-b border-gray-100 bg-gray-50 shrink-0">
-        <Link to="/projects" className="hover:text-gray-700">프로젝트</Link>
+      <div className="flex items-center gap-2 text-xs text-content-muted px-4 py-2 border-b border-line bg-canvas shrink-0">
+        <Link to="/projects" className="hover:text-content">프로젝트</Link>
         <ChevronRight size={12} />
-        <Link to={`/projects/${projectId}`} className="hover:text-gray-700">프로젝트 상세</Link>
+        <Link to={`/projects/${projectId}`} className="hover:text-content">프로젝트 상세</Link>
         <ChevronRight size={12} />
-        <Link to={`/projects/${projectId}/documents`} className="hover:text-gray-700">산출물 목록</Link>
+        <Link to={`/projects/${projectId}/documents`} className="hover:text-content">산출물 목록</Link>
         <ChevronRight size={12} />
-        <span className="text-gray-800 font-medium truncate max-w-xs">{meta.original_name}</span>
+        <span className="text-content font-medium truncate max-w-xs">{meta.original_name}</span>
       </div>
 
       {/* 에디터 / 뷰어 영역 */}
@@ -170,11 +170,11 @@ export default function FileViewer() {
         )}
         {fileType === 'pdf' && (
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white shrink-0">
-              <span className="text-sm font-medium text-gray-700 truncate">{meta.original_name}</span>
+            <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface shrink-0">
+              <span className="text-sm font-medium text-content truncate">{meta.original_name}</span>
               <button
                 onClick={handleDownload}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-content-muted border border-line rounded-lg hover:bg-surface-hover"
               >
                 <Download size={14} />
                 다운로드
@@ -190,11 +190,11 @@ export default function FileViewer() {
           </div>
         )}
         {fileType === 'other' && (
-          <div className="flex flex-col h-full items-center justify-center gap-4 text-gray-500">
+          <div className="flex flex-col h-full items-center justify-center gap-4 text-content-muted">
             <p className="text-sm">이 파일 형식은 브라우저에서 미리볼 수 없습니다.</p>
             <button
               onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover"
             >
               <Download size={14} />
               파일 다운로드

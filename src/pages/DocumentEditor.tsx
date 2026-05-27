@@ -104,7 +104,7 @@ export default function DocumentEditor() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-sm text-gray-400">불러오는 중...</div>
+        <div className="text-sm text-content-subtle">불러오는 중...</div>
       </div>
     )
   }
@@ -112,41 +112,41 @@ export default function DocumentEditor() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 gap-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500 min-w-0">
-          <Link to="/projects" className="hover:text-gray-700 shrink-0">프로젝트</Link>
+      <div className="h-14 border-b border-line bg-surface flex items-center justify-between px-6 shrink-0 gap-4">
+        <div className="flex items-center gap-2 text-sm text-content-muted min-w-0">
+          <Link to="/projects" className="hover:text-content shrink-0">프로젝트</Link>
           <ChevronRight size={14} className="shrink-0" />
           {document?.projectId && (
             <>
-              <Link to={`/projects/${document.projectId}/documents`} className="hover:text-gray-700 shrink-0">
+              <Link to={`/projects/${document.projectId}/documents`} className="hover:text-content shrink-0">
                 산출물 목록
               </Link>
               <ChevronRight size={14} className="shrink-0" />
             </>
           )}
-          <span className="text-gray-900 font-medium truncate">{document?.title || '문서'}</span>
+          <span className="text-content font-medium truncate">{document?.title || '문서'}</span>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           {autoSaved && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+            <span className="text-xs text-content-subtle flex items-center gap-1">
               <Clock size={11} />
               {autoSaved.toLocaleTimeString()} 자동저장
             </span>
           )}
-          <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+          <span className="text-xs font-mono text-content-subtle bg-surface-hover px-2 py-0.5 rounded">
             {document?.currentVersion || 'v1.0'}
           </span>
           <button
             onClick={() => setShowVersions(!showVersions)}
-            className={`p-1.5 rounded-lg transition-colors ${showVersions ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+            className={`p-1.5 rounded-lg transition-colors ${showVersions ? 'bg-surface-hover text-content' : 'text-content-subtle hover:text-content-muted hover:bg-surface-hover'}`}
             title="버전 이력"
           >
             <History size={16} />
           </button>
           <button
             onClick={printDocument}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            className="p-1.5 text-content-subtle hover:text-content-muted hover:bg-surface-hover rounded-lg transition-colors"
             title="인쇄/PDF"
           >
             <Printer size={16} />
@@ -161,7 +161,7 @@ export default function DocumentEditor() {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
           >
             <Save size={14} />
             {isSaving ? '저장 중...' : '버전 저장'}
@@ -170,14 +170,14 @@ export default function DocumentEditor() {
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-gray-100 bg-white px-6 py-1.5 flex items-center gap-1 shrink-0">
+      <div className="border-b border-line bg-surface px-6 py-1.5 flex items-center gap-1 shrink-0">
         <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} title="굵게">
           <Bold size={14} />
         </ToolbarBtn>
         <ToolbarBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} title="기울임">
           <Italic size={14} />
         </ToolbarBtn>
-        <div className="w-px h-4 bg-gray-200 mx-1" />
+        <div className="w-px h-4 bg-surface-hover mx-1" />
         <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} title="제목 2">
           <Heading2 size={14} />
         </ToolbarBtn>
@@ -197,9 +197,9 @@ export default function DocumentEditor() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Editor */}
-        <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="flex-1 overflow-auto bg-canvas">
           <div className="max-w-4xl mx-auto p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6 print:text-3xl">
+            <h1 className="text-2xl font-bold text-content mb-6 print:text-3xl">
               {document?.title}
             </h1>
             <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
@@ -210,20 +210,20 @@ export default function DocumentEditor() {
 
         {/* Version Sidebar */}
         {showVersions && (
-          <div className="w-64 border-l border-gray-200 bg-white shrink-0 flex flex-col">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-900">버전 이력</h3>
+          <div className="w-64 border-l border-line bg-surface shrink-0 flex flex-col">
+            <div className="px-4 py-3 border-b border-line">
+              <h3 className="text-sm font-semibold text-content">버전 이력</h3>
             </div>
             <div className="overflow-auto flex-1 p-3">
               {versions.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center mt-4">저장된 버전이 없습니다.</p>
+                <p className="text-xs text-content-subtle text-center mt-4">저장된 버전이 없습니다.</p>
               ) : (
                 <div className="space-y-2">
                   {versions.map((v, i) => (
                     <div
                       key={v.id}
                       className={`p-2.5 rounded-lg border transition-colors cursor-pointer ${
-                        i === 0 ? 'border-blue-200 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
+                        i === 0 ? 'border-blue-200 bg-primary-soft' : 'border-line hover:border-line'
                       }`}
                       onClick={() => {
                         if (editor && v.contentJson) {
@@ -232,15 +232,15 @@ export default function DocumentEditor() {
                       }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold font-mono text-gray-900">{v.version}</span>
+                        <span className="text-sm font-semibold font-mono text-content">{v.version}</span>
                         {i === 0 && (
-                          <span className="text-xs text-blue-600">최신</span>
+                          <span className="text-xs text-primary">최신</span>
                         )}
                       </div>
                       {v.changeNote && (
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{v.changeNote}</p>
+                        <p className="text-xs text-content-muted mt-0.5 truncate">{v.changeNote}</p>
                       )}
-                      <p className="text-xs text-gray-300 mt-0.5">
+                      <p className="text-xs text-content-subtle mt-0.5">
                         {new Date(v.createdAt).toLocaleDateString('ko-KR')}
                       </p>
                     </div>
@@ -255,15 +255,15 @@ export default function DocumentEditor() {
       {/* AI Modal */}
       {showAIModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
+              <h2 className="text-lg font-semibold text-content flex items-center gap-2">
                 <Sparkles size={18} className="text-purple-600" />
                 AI 초안 생성
               </h2>
               <button
                 onClick={() => { setShowAIModal(false); reset() }}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-content-subtle hover:text-content-muted text-2xl leading-none"
               >
                 &times;
               </button>
@@ -273,13 +273,13 @@ export default function DocumentEditor() {
               {!generatedText ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">산출물 유형</label>
+                    <label className="block text-sm font-medium text-content mb-1">산출물 유형</label>
                     <input
                       type="text"
                       value={documentType}
                       onChange={e => setDocumentType(e.target.value)}
                       placeholder="예: 요구사항 정의서, 시스템 설계서..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                       autoFocus
                       onKeyDown={e => e.key === 'Enter' && handleAIGenerate()}
                     />
@@ -301,8 +301,8 @@ export default function DocumentEditor() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="font-mono text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-canvas rounded-lg p-4">
+                  <div className="font-mono text-sm text-content whitespace-pre-wrap leading-relaxed">
                     {generatedText}
                     {isGenerating && <span className="animate-pulse text-purple-500">▋</span>}
                   </div>
@@ -310,10 +310,10 @@ export default function DocumentEditor() {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 shrink-0">
+            <div className="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0">
               <button
                 onClick={() => { setShowAIModal(false); reset() }}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm text-content-muted border border-line rounded-lg hover:bg-surface-hover transition-colors"
               >
                 닫기
               </button>
@@ -330,7 +330,7 @@ export default function DocumentEditor() {
                 <button
                   onClick={insertAIContent}
                   disabled={isGenerating}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
                 >
                   에디터에 삽입
                 </button>
@@ -359,7 +359,7 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+        active ? 'bg-surface-hover text-content' : 'text-content-muted hover:bg-surface-hover hover:text-content'
       }`}
     >
       {children}

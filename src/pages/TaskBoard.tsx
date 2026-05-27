@@ -19,8 +19,8 @@ const STATUS_LABEL: Record<Task['status'], string> = {
   delayed:     '지연',
 }
 const STATUS_COLOR: Record<Task['status'], string> = {
-  not_started: 'bg-gray-100 text-gray-600',
-  in_progress: 'bg-blue-100 text-blue-700',
+  not_started: 'bg-surface-hover text-content-muted',
+  in_progress: 'bg-blue-100 text-primary',
   completed:   'bg-green-100 text-green-700',
   delayed:     'bg-red-100 text-red-700',
 }
@@ -82,17 +82,17 @@ function TaskRow({
   }
 
   return (
-    <tr className="hover:bg-gray-50 transition-colors group">
+    <tr className="hover:bg-surface-hover transition-colors group">
       {/* WBS 코드 */}
-      <td className="pl-8 pr-3 py-3 font-mono text-xs text-gray-400 whitespace-nowrap">
+      <td className="pl-8 pr-3 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">
         {task.wbs_code}
       </td>
       {/* 작업명 */}
-      <td className="px-3 py-3 text-sm font-medium text-gray-800">
+      <td className="px-3 py-3 text-sm font-medium text-content">
         {task.task_name}
       </td>
       {/* 기간 */}
-      <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
+      <td className="px-3 py-3 text-xs text-content-muted whitespace-nowrap">
         {fmtDate(task.start_date)} ~ {fmtDate(task.end_date)}
       </td>
       {/* 계획/실적 진행률 */}
@@ -104,17 +104,17 @@ function TaskRow({
               onChange={e => setProgress(Number(e.target.value))}
               className="flex-1 accent-blue-600"
             />
-            <span className="text-xs font-mono w-9 text-right text-gray-700">{progress}%</span>
+            <span className="text-xs font-mono w-9 text-right text-content">{progress}%</span>
           </div>
         ) : (
           <div className="min-w-[120px]">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <div className="flex justify-between text-xs text-content-subtle mb-1">
               <span>계획 {pct(task.planned_progress)}</span>
-              <span className="font-medium text-gray-700">실적 {pct(task.actual_progress)}</span>
+              <span className="font-medium text-content">실적 {pct(task.actual_progress)}</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden relative">
+            <div className="h-2 bg-surface-hover rounded-full overflow-hidden relative">
               <div
-                className="absolute h-full bg-gray-200 rounded-full"
+                className="absolute h-full bg-surface-hover rounded-full"
                 style={{ width: pct(task.planned_progress) }}
               />
               <div
@@ -135,17 +135,17 @@ function TaskRow({
             value={assignee}
             onChange={e => setAssignee(e.target.value)}
             placeholder="담당자 이름"
-            className="w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-24 px-2 py-1 text-xs border border-line rounded focus:outline-none focus:ring-1 focus:ring-primary"
           />
         ) : (
-          <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className="flex items-center gap-1 text-xs text-content-muted">
             {task.assignee_name ? (
               <>
-                <User size={11} className="text-gray-400" />
+                <User size={11} className="text-content-subtle" />
                 <span>{task.assignee_name}</span>
               </>
             ) : (
-              <span className="text-gray-300">미지정</span>
+              <span className="text-content-subtle">미지정</span>
             )}
           </div>
         )}
@@ -164,14 +164,14 @@ function TaskRow({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+              className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 flex items-center gap-1"
             >
               {saving ? <Loader2 size={10} className="animate-spin" /> : null}
               저장
             </button>
             <button
               onClick={handleCancel}
-              className="px-2 py-1 text-xs text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
+              className="px-2 py-1 text-xs text-content-muted border border-line rounded hover:bg-surface-hover"
             >
               취소
             </button>
@@ -179,7 +179,7 @@ function TaskRow({
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-blue-600 border border-blue-200 rounded hover:bg-blue-50"
+            className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-primary border border-blue-200 rounded hover:bg-primary-soft"
           >
             수정
           </button>
@@ -208,31 +208,31 @@ function GroupRow({
 
   return (
     <tr
-      className={`cursor-pointer ${level === 1 ? 'bg-blue-50 hover:bg-blue-100' : 'bg-gray-50 hover:bg-gray-100'}`}
+      className={`cursor-pointer ${level === 1 ? 'bg-primary-soft hover:bg-primary-soft' : 'bg-canvas hover:bg-surface-hover'}`}
       onClick={onToggle}
     >
-      <td className={`py-3 font-mono text-xs ${level === 1 ? 'pl-4 text-blue-500' : 'pl-6 text-gray-400'}`}>
+      <td className={`py-3 font-mono text-xs ${level === 1 ? 'pl-4 text-blue-500' : 'pl-6 text-content-subtle'}`}>
         {code}
       </td>
-      <td className={`px-3 py-3 font-semibold ${level === 1 ? 'text-blue-800 text-sm' : 'text-gray-700 text-sm'}`}>
+      <td className={`px-3 py-3 font-semibold ${level === 1 ? 'text-blue-800 text-sm' : 'text-content text-sm'}`}>
         {expanded ? <ChevronDown size={14} className="inline mr-1" /> : <ChevronUp size={14} className="inline mr-1" />}
         {name}
       </td>
-      <td className="px-3 py-3 text-xs text-gray-400">하위 {total}개</td>
+      <td className="px-3 py-3 text-xs text-content-subtle">하위 {total}개</td>
       <td className="px-3 py-3">
         <div className="min-w-[120px]">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <div className="flex justify-between text-xs text-content-subtle mb-1">
             <span>계획 {pct(avgPlan)}</span>
-            <span className="font-medium text-gray-600">실적 {pct(avgActual)}</span>
+            <span className="font-medium text-content-muted">실적 {pct(avgActual)}</span>
           </div>
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden relative">
-            <div className="absolute h-full bg-gray-300 rounded-full" style={{ width: pct(avgPlan) }} />
+          <div className="h-1.5 bg-surface-hover rounded-full overflow-hidden relative">
+            <div className="absolute h-full bg-surface-hover rounded-full" style={{ width: pct(avgPlan) }} />
             <div className={`absolute h-full rounded-full ${avgActual >= avgPlan ? 'bg-green-400' : 'bg-blue-400'}`} style={{ width: pct(avgActual) }} />
           </div>
         </div>
       </td>
       <td className="px-3 py-3" />
-      <td className="px-3 py-3 text-xs text-gray-500">
+      <td className="px-3 py-3 text-xs text-content-muted">
         완료 {done} / 지연 <span className={delayed > 0 ? 'text-red-500 font-medium' : ''}>{delayed}</span>
       </td>
       <td className="px-3 py-3" />
@@ -298,15 +298,15 @@ function ImportModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">WBS 파일 선택</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <h2 className="text-base font-semibold text-content">WBS 파일 선택</h2>
+          <button onClick={onClose} className="text-content-subtle hover:text-content-muted">
             <X size={18} />
           </button>
         </div>
         <div className="p-6">
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-content-muted mb-4">
             이 프로젝트에 업로드된 Excel 파일을 선택하면 Schedule 시트에서 작업을 가져옵니다.
             <br />
             <span className="text-orange-600 font-medium">주의: 기존 작업 목록이 교체됩니다.</span>
@@ -316,11 +316,11 @@ function ImportModal({
           )}
           {loadingFiles ? (
             <div className="flex justify-center py-8">
-              <Loader2 size={24} className="animate-spin text-gray-300" />
+              <Loader2 size={24} className="animate-spin text-content-subtle" />
             </div>
           ) : wbsFiles.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              <FileSpreadsheet size={32} className="mx-auto mb-2 text-gray-200" />
+            <div className="text-center py-8 text-content-subtle text-sm">
+              <FileSpreadsheet size={32} className="mx-auto mb-2 text-content-subtle" />
               Excel 파일이 없습니다. 산출물 목록에서 WBS 파일을 먼저 업로드하세요.
             </div>
           ) : (
@@ -330,15 +330,15 @@ function ImportModal({
                   key={f.id}
                   onClick={() => handleSelect(f)}
                   disabled={downloading !== null}
-                  className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-4 py-3 border border-line rounded-xl hover:border-blue-400 hover:bg-primary-soft transition-colors text-left disabled:opacity-50"
                 >
                   {downloading === f.id
                     ? <Loader2 size={18} className="animate-spin text-blue-500 shrink-0" />
                     : <FileSpreadsheet size={18} className="text-green-500 shrink-0" />
                   }
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-800 truncate">{f.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-sm font-medium text-content truncate">{f.name}</div>
+                    <div className="text-xs text-content-subtle mt-0.5">
                       {new Date(f.createdAt).toLocaleDateString('ko-KR')}
                     </div>
                   </div>
@@ -419,31 +419,31 @@ export default function TaskBoard() {
   return (
     <div className="p-8">
       {/* 브레드크럼 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link to="/projects" className="hover:text-gray-700">프로젝트</Link>
+      <div className="flex items-center gap-2 text-sm text-content-muted mb-6">
+        <Link to="/projects" className="hover:text-content">프로젝트</Link>
         <ChevronRight size={14} />
-        <Link to={`/projects/${projectId}`} className="hover:text-gray-700">
+        <Link to={`/projects/${projectId}`} className="hover:text-content">
           {project?.name ?? '프로젝트 상세'}
         </Link>
         <ChevronRight size={14} />
-        <span className="text-gray-900">WBS 작업 관리</span>
+        <span className="text-content">WBS 작업 관리</span>
       </div>
 
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ClipboardList size={22} className="text-blue-600" />
+          <h1 className="text-2xl font-bold text-content flex items-center gap-2">
+            <ClipboardList size={22} className="text-primary" />
             WBS 작업 관리
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-content-muted text-sm mt-1">
             WBS 파일에서 가져온 작업 목록으로 담당자별 일정을 관리합니다.
           </p>
         </div>
         <button
           onClick={() => setShowImport(true)}
           disabled={importing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
         >
           {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
           {importing ? '가져오는 중...' : 'WBS 가져오기'}
@@ -461,14 +461,14 @@ export default function TaskBoard() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: '전체 작업', value: stats.total, color: 'text-gray-800', bg: 'bg-white' },
+          { label: '전체 작업', value: stats.total, color: 'text-content', bg: 'bg-surface' },
           { label: '완료', value: stats.done, color: 'text-green-700', bg: 'bg-green-50' },
-          { label: '진행중', value: stats.active, color: 'text-blue-700', bg: 'bg-blue-50' },
+          { label: '진행중', value: stats.active, color: 'text-primary', bg: 'bg-primary-soft' },
           { label: '지연', value: stats.delayed, color: 'text-red-700', bg: 'bg-red-50' },
         ].map(s => (
-          <div key={s.label} className={`${s.bg} rounded-xl border border-gray-100 p-4 text-center`}>
+          <div key={s.label} className={`${s.bg} rounded-xl border border-line p-4 text-center`}>
             <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-sm text-gray-500 mt-1">{s.label}</div>
+            <div className="text-sm text-content-muted mt-1">{s.label}</div>
           </div>
         ))}
       </div>
@@ -476,12 +476,12 @@ export default function TaskBoard() {
       {/* 필터 */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-1.5 text-sm">
-          <User size={14} className="text-gray-400" />
-          <span className="text-gray-500 text-xs font-medium">담당자</span>
+          <User size={14} className="text-content-subtle" />
+          <span className="text-content-muted text-xs font-medium">담당자</span>
           <select
             value={filterAssignee}
             onChange={e => setFilterAssignee(e.target.value)}
-            className="ml-1 px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            className="ml-1 px-2 py-1 border border-line rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-surface"
           >
             {assignees.map(a => (
               <option key={a} value={a}>{a}</option>
@@ -489,11 +489,11 @@ export default function TaskBoard() {
           </select>
         </div>
         <div className="flex items-center gap-1.5 text-sm">
-          <span className="text-gray-500 text-xs font-medium">상태</span>
+          <span className="text-content-muted text-xs font-medium">상태</span>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            className="px-2 py-1 border border-line rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-surface"
           >
             <option value="전체">전체</option>
             <option value="not_started">예정</option>
@@ -505,7 +505,7 @@ export default function TaskBoard() {
         {(filterAssignee !== '전체' || filterStatus !== '전체') && (
           <button
             onClick={() => { setFilterAssignee('전체'); setFilterStatus('전체') }}
-            className="text-xs text-blue-600 hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             필터 초기화
           </button>
@@ -513,40 +513,40 @@ export default function TaskBoard() {
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 size={28} className="animate-spin text-gray-300" />
+            <Loader2 size={28} className="animate-spin text-content-subtle" />
           </div>
         ) : tasks.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-20 text-gray-400">
-            <ClipboardList size={48} className="text-gray-200" />
-            <p className="font-medium text-gray-500">작업이 없습니다</p>
+          <div className="flex flex-col items-center gap-4 py-20 text-content-subtle">
+            <ClipboardList size={48} className="text-content-subtle" />
+            <p className="font-medium text-content-muted">작업이 없습니다</p>
             <p className="text-sm text-center">
               "WBS 가져오기" 버튼을 눌러 산출물 목록에 업로드된<br />
               Excel WBS 파일에서 작업을 가져오세요.
             </p>
             <button
               onClick={() => setShowImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
             >
               <Upload size={15} /> WBS 가져오기
             </button>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100 bg-gray-50">
+            <thead className="border-b border-line bg-canvas">
               <tr>
-                <th className="text-left pl-4 pr-3 py-3 text-xs font-medium text-gray-500 w-24">WBS</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500">작업명</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-32">기간</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-44">진행률</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-24">담당자</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-20">상태</th>
+                <th className="text-left pl-4 pr-3 py-3 text-xs font-medium text-content-muted w-24">WBS</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-content-muted">작업명</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-content-muted w-32">기간</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-content-muted w-44">진행률</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-content-muted w-24">담당자</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-content-muted w-20">상태</th>
                 <th className="px-3 py-3 w-24"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {l1Groups.map(l1 => {
                 const l1Expanded = !collapsed.has(l1.wbs_code)
                 const l1L2 = l2Groups.filter(g => getL1Code(g.wbs_code) === l1.wbs_code)
@@ -592,7 +592,7 @@ export default function TaskBoard() {
 
       {/* 작업 수 표시 */}
       {tasks.length > 0 && (
-        <p className="mt-3 text-xs text-gray-400 text-right">
+        <p className="mt-3 text-xs text-content-subtle text-right">
           {filtered.length < tasks.length
             ? `${filtered.length} / ${tasks.length}개 표시`
             : `전체 ${tasks.length}개`}
