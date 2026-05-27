@@ -23,9 +23,8 @@ export function useMembers(projectId: string) {
       // 1) project_members 조회
       const { data: memberRows, error: memberErr } = await supabase
         .from('project_members')
-        .select('id, project_id, user_id, role, display_name, created_at')
+        .select('id, project_id, user_id, role, display_name')
         .eq('project_id', projectId)
-        .order('created_at')
       if (memberErr) throw memberErr
 
       const rows = memberRows ?? []
@@ -48,7 +47,7 @@ export function useMembers(projectId: string) {
         role: r.role,
         display_name: r.display_name,
         email: emailMap[r.user_id] ?? '',
-        created_at: r.created_at,
+        created_at: '',
       })))
     } catch (err) {
       setError((err as Error).message)
