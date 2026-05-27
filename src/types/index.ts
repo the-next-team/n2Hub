@@ -18,6 +18,7 @@ export interface Project {
   startDate: string
   endDate: string
   status: 'active' | 'archived'
+  createdBy: string
   createdAt: string
 }
 

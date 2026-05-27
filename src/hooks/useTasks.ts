@@ -13,6 +13,7 @@ export interface Task {
   planned_progress: number
   actual_progress: number
   assignee_name: string | null
+  assignee_user_id: string | null
   status: 'not_started' | 'in_progress' | 'completed' | 'delayed'
   notes: string | null
   created_at: string
@@ -20,8 +21,8 @@ export interface Task {
 }
 
 export type TaskUpdate = Partial<Pick<Task,
-  'actual_progress' | 'planned_progress' | 'assignee_name' | 'status' | 'notes' |
-  'start_date' | 'end_date'
+  'actual_progress' | 'planned_progress' | 'assignee_name' | 'assignee_user_id' |
+  'status' | 'notes' | 'start_date' | 'end_date'
 >>
 
 export function useTasks(projectId: string) {
