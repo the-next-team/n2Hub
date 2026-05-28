@@ -10,6 +10,8 @@ import {
 import { useFileTree, getItemPath } from '../hooks/useFileTree'
 import type { FlatNode } from '../hooks/useFileTree'
 import type { StorageItem } from '../hooks/useFiles'
+import { useTasks } from '../hooks/useTasks'
+import type { Task } from '../hooks/useTasks'
 import { Button, PageHeader } from '../components/ui'
 
 const ACCEPT_TYPES = '.docx,.xlsx,.pptx,.pdf,.hwp,.doc,.xls,.ppt,.zip,.png,.jpg,.jpeg'
@@ -40,8 +42,12 @@ export default function DocumentList() {
   const navigate = useNavigate()
   const {
     getFlatList, openPaths, loadingPaths, initialLoading, uploading, error, setError,
-    rootStats, toggleFolder, uploadFiles, createFolder, downloadFile, deleteItem,
+    rootStats, toggleFolder, uploadFiles, createFolder, downloadFile, deleteItem, linkToTask,
   } = useFileTree(id!)
+
+  // 이 프로젝트의 리프 태스크 목록 (연결 선택용)
+  const { tasks: allTasks } = useTasks(id!)
+  const leafTasks = allTasks.filter(t => t.wbs_level === 3)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const uploadTargetRef = useRef<string>('')
@@ -195,9 +201,10 @@ export default function DocumentList() {
             <thead className="border-b border-line bg-canvas">
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium text-content-muted">이름</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-20">버전</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-24">크기</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-32">날짜</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-36">연결 태스크</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-16">버전</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-20">크기</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-28">날짜</th>
                 <th className="px-4 py-2.5 w-24" />
               </tr>
             </thead>
@@ -220,9 +227,11 @@ export default function DocumentList() {
                   <FileRow
                     key={node.item.id}
                     node={node}
+                    tasks={leafTasks}
                     onDownload={() => downloadFile(node.item)}
                     onDelete={() => deleteItem(node.item, node.parentPath)}
                     onOpen={() => navigate(`/projects/${id}/view/${node.item.id}`)}
+                    onLinkTask={taskId => linkToTask(node.item.id, taskId, node.parentPath)}
                   />
                 )
               )}
@@ -277,6 +286,7 @@ function FolderRow({ node, isOpen, isLoading, onToggle, onDelete, onUploadHere, 
       <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
       <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
       <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
+      <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
       <td className="px-4 py-2.5">
         <div
           className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -310,23 +320,26 @@ function FolderRow({ node, isOpen, isLoading, onToggle, onDelete, onUploadHere, 
 }
 
 /* ── 파일 행 ── */
-function FileRow({ node, onDownload, onDelete, onOpen }: {
+function FileRow({ node, tasks, onDownload, onDelete, onOpen, onLinkTask }: {
   node: FlatNode
+  tasks: Task[]
   onDownload: () => void
   onDelete: () => void
   onOpen: () => void
+  onLinkTask: (taskId: string | null) => void
 }) {
   const item: StorageItem = node.item
   const indent = node.depth * 20
+  const linkedTask = tasks.find(t => t.id === item.taskId)
 
   return (
     <tr
       className="hover:bg-surface-hover transition-colors group cursor-pointer"
       onClick={onOpen}
     >
+      {/* 이름 */}
       <td className="px-4 py-2.5" style={{ paddingLeft: `${16 + indent}px` }}>
         <div className="flex items-center gap-2">
-          {/* 파일은 chevron 너비만큼 공간 확보 */}
           <span className="w-4 shrink-0" />
           <FileIcon name={item.name} mimeType={item.mimeType} />
           <div className="min-w-0">
@@ -337,6 +350,32 @@ function FileRow({ node, onDownload, onDelete, onOpen }: {
           </div>
         </div>
       </td>
+
+      {/* 연결 태스크 */}
+      <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
+        {tasks.length === 0 ? (
+          <span className="text-xs text-content-subtle">—</span>
+        ) : (
+          <select
+            value={item.taskId ?? ''}
+            onChange={e => onLinkTask(e.target.value || null)}
+            className={`text-xs border rounded px-1.5 py-0.5 max-w-[140px] truncate bg-surface transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${
+              linkedTask
+                ? 'border-primary/30 text-primary bg-primary-soft'
+                : 'border-line text-content-muted hover:border-content-muted'
+            }`}
+          >
+            <option value="">연결 없음</option>
+            {tasks.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.wbs_code} {t.task_name}
+              </option>
+            ))}
+          </select>
+        )}
+      </td>
+
+      {/* 버전 */}
       <td className="px-4 py-2.5">
         {item.version && (
           <span className="inline-block px-2 py-0.5 rounded-full text-xs font-mono bg-surface-hover text-content-muted">
@@ -344,32 +383,29 @@ function FileRow({ node, onDownload, onDelete, onOpen }: {
           </span>
         )}
       </td>
+
+      {/* 크기 */}
       <td className="px-4 py-2.5 text-content-muted text-xs">{formatFileSize(item.size)}</td>
+
+      {/* 날짜 */}
       <td className="px-4 py-2.5 text-content-muted text-xs">{formatDate(item.createdAt)}</td>
+
+      {/* 액션 */}
       <td className="px-4 py-2.5">
         <div
           className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={e => e.stopPropagation()}
         >
-          <button
-            onClick={onOpen}
-            title="열기"
-            className="p-1.5 rounded-md text-content-subtle hover:text-success hover:bg-success-soft transition-colors"
-          >
+          <button onClick={onOpen} title="열기"
+            className="p-1.5 rounded-md text-content-subtle hover:text-success hover:bg-success-soft transition-colors">
             <ExternalLink size={14} />
           </button>
-          <button
-            onClick={onDownload}
-            title="다운로드"
-            className="p-1.5 rounded-md text-content-subtle hover:text-primary hover:bg-primary-soft transition-colors"
-          >
+          <button onClick={onDownload} title="다운로드"
+            className="p-1.5 rounded-md text-content-subtle hover:text-primary hover:bg-primary-soft transition-colors">
             <Download size={14} />
           </button>
-          <button
-            onClick={onDelete}
-            title="삭제"
-            className="p-1.5 rounded-md text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors"
-          >
+          <button onClick={onDelete} title="삭제"
+            className="p-1.5 rounded-md text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors">
             <Trash2 size={14} />
           </button>
         </div>

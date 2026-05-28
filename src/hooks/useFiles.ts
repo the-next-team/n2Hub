@@ -14,6 +14,8 @@ export interface StorageItem {
   // 파일명 파싱
   title?: string
   version?: string
+  // 태스크 연결
+  taskId?: string | null
 }
 
 function parseFileName(name: string): { title: string; version: string } {
@@ -41,6 +43,7 @@ function mapRow(row: any): StorageItem {
     createdAt: row.created_at,
     title,
     version: row.version || version,
+    taskId: row.task_id ?? null,
   }
 }
 

@@ -49,12 +49,13 @@ interface WbsFile {
 
 // ---------- 작업 행 ----------
 function TaskRow({
-  task, canEdit, isPM, members, onUpdate,
+  task, canEdit, isPM, members, linkedFileCount, onUpdate,
 }: {
   task: Task
-  canEdit: boolean      // 진행률 수정 가능 여부
-  isPM: boolean         // 담당자 지정 가능 여부
+  canEdit: boolean
+  isPM: boolean
   members: ProjectMember[]
+  linkedFileCount: number
   onUpdate: (id: string, changes: Partial<Pick<Task, 'actual_progress' | 'assignee_name' | 'assignee_user_id' | 'status'>>) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -177,6 +178,18 @@ function TaskRow({
           {STATUS_ICON[task.status]}
           {STATUS_LABEL[task.status]}
         </span>
+      </td>
+
+      {/* 연결 산출물 */}
+      <td className="px-3 py-3">
+        {linkedFileCount > 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">
+            <FileSpreadsheet size={10} />
+            {linkedFileCount}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-300">—</span>
+        )}
       </td>
 
       {/* 액션 */}
@@ -375,6 +388,27 @@ export default function TaskBoard() {
   const [filterStatus, setFilterStatus]     = useState<'전체' | Task['status']>('전체')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
+  // 태스크별 연결 산출물 수
+  const [fileCounts, setFileCounts] = useState<Map<string, number>>(new Map())
+  useEffect(() => {
+    if (!projectId) return
+    supabase
+      .from('files')
+      .select('task_id')
+      .eq('project_id', projectId)
+      .not('task_id', 'is', null)
+      .neq('mime_type', 'folder')
+      .then(({ data }) => {
+        if (!data) return
+        const map = new Map<string, number>()
+        for (const row of data) {
+          const tid = row.task_id as string
+          map.set(tid, (map.get(tid) || 0) + 1)
+        }
+        setFileCounts(map)
+      })
+  }, [projectId, tasks.length])  // tasks 변경 시 재조회
+
   // 담당자 목록 (멤버 기반 + 텍스트 기반)
   const assigneeOptions = ['전체', ...Array.from(new Set([
     ...members.map(m => m.display_name ?? m.email.split('@')[0]),
@@ -542,6 +576,7 @@ export default function TaskBoard() {
                   {isPM ? '담당자 지정' : '담당자'}
                 </th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-20">상태</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-gray-500 w-16">산출물</th>
                 <th className="px-3 py-3 w-24"></th>
               </tr>
             </thead>
@@ -568,6 +603,7 @@ export default function TaskBoard() {
                               canEdit={canEditTask(task)}
                               isPM={isPM}
                               members={members}
+                              linkedFileCount={fileCounts.get(task.id) ?? 0}
                               onUpdate={updateTask}
                             />
                           ))}

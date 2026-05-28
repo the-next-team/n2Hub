@@ -28,6 +28,7 @@ function mapRow(row: any): StorageItem {
     createdAt: row.created_at,
     title,
     version: row.version || version,
+    taskId: row.task_id ?? null,
   }
 }
 
@@ -257,6 +258,26 @@ export function useFileTree(projectId: string) {
     }
   }, [projectId, fetchPath])
 
+  // 파일 ↔ 태스크 연결
+  const linkToTask = useCallback(async (
+    fileId: string,
+    taskId: string | null,
+    parentPath: string,
+  ) => {
+    setError(null)
+    const { error } = await supabase
+      .from('files')
+      .update({ task_id: taskId })
+      .eq('id', fileId)
+    if (error) { setError('연결 실패: ' + error.message); return }
+    setPathItems(prev => {
+      const next = new Map(prev)
+      const items = next.get(parentPath) || []
+      next.set(parentPath, items.map(i => i.id === fileId ? { ...i, taskId } : i))
+      return next
+    })
+  }, [])
+
   return {
     getFlatList,
     openPaths,
@@ -271,5 +292,6 @@ export function useFileTree(projectId: string) {
     createFolder,
     downloadFile,
     deleteItem,
+    linkToTask,
   }
 }
