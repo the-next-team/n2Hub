@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ChevronRight, ClipboardList, AlertCircle, CheckCircle2,
   Clock, Loader2, Upload, X, User, ChevronDown, ChevronUp,
-  FileSpreadsheet, RefreshCw, Crown, Lock, BarChart2,
+  FileSpreadsheet, RefreshCw, Crown, Lock, BarChart2, MessageSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -14,6 +14,8 @@ import { parseWbsBuffer } from '../utils/wbsParser'
 import type { Task } from '../hooks/useTasks'
 import type { ProjectMember } from '../hooks/useMembers'
 import { Button, PageHeader } from '../components/ui'
+import CommentThread from '../components/CommentThread'
+import { useCommentCounts } from '../hooks/useComments'
 
 // ---------- 상수 ----------
 const STATUS_LABEL: Record<Task['status'], string> = {
@@ -49,14 +51,16 @@ interface WbsFile {
 
 // ---------- 작업 행 ----------
 function TaskRow({
-  task, canEdit, isPM, members, linkedFileCount, onUpdate,
+  task, canEdit, isPM, members, linkedFileCount, commentCount, onUpdate, onCommentClick,
 }: {
   task: Task
   canEdit: boolean
   isPM: boolean
   members: ProjectMember[]
   linkedFileCount: number
+  commentCount: number
   onUpdate: (id: string, changes: Partial<Pick<Task, 'actual_progress' | 'assignee_name' | 'assignee_user_id' | 'status'>>) => void
+  onCommentClick: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [progress, setProgress] = useState(Math.round(task.actual_progress * 100))
@@ -108,7 +112,20 @@ function TaskRow({
       </td>
 
       {/* 작업명 */}
-      <td className="px-3 py-3 text-sm font-medium text-gray-800">{task.task_name}</td>
+      <td className="px-3 py-3 text-sm font-medium text-gray-800">
+        <div className="flex items-center gap-2">
+          <span>{task.task_name}</span>
+          <button
+            onClick={onCommentClick}
+            className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-indigo-600 shrink-0"
+          >
+            <MessageSquare size={12} />
+            {commentCount > 0 && (
+              <span className="text-[10px] font-semibold">{commentCount}</span>
+            )}
+          </button>
+        </div>
+      </td>
 
       {/* 기간 */}
       <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
@@ -387,6 +404,8 @@ export default function TaskBoard() {
   const [filterAssignee, setFilterAssignee] = useState('전체')
   const [filterStatus, setFilterStatus]     = useState<'전체' | Task['status']>('전체')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  // 댓글 패널
+  const [commentTask, setCommentTask] = useState<Task | null>(null)
 
   // 태스크별 연결 산출물 수
   const [fileCounts, setFileCounts] = useState<Map<string, number>>(new Map())
@@ -408,6 +427,10 @@ export default function TaskBoard() {
         setFileCounts(map)
       })
   }, [projectId, tasks.length])  // tasks 변경 시 재조회
+
+  // 댓글 수 배지
+  const l3Ids = useMemo(() => tasks.filter(t => t.wbs_level === 3).map(t => t.id), [tasks])
+  const commentCounts = useCommentCounts(projectId!, 'task', l3Ids)
 
   // 담당자 목록 (멤버 기반 + 텍스트 기반)
   const assigneeOptions = ['전체', ...Array.from(new Set([
@@ -614,7 +637,9 @@ export default function TaskBoard() {
                               isPM={isPM}
                               members={members}
                               linkedFileCount={fileCounts.get(task.id) ?? 0}
+                              commentCount={commentCounts.get(task.id) ?? 0}
                               onUpdate={updateTask}
+                              onCommentClick={() => setCommentTask(task)}
                             />
                           ))}
                         </React.Fragment>
@@ -636,6 +661,41 @@ export default function TaskBoard() {
 
       {showImport && (
         <ImportModal projectId={projectId!} onImport={handleImportBuffer} onClose={() => setShowImport(false)} />
+      )}
+
+      {/* ── 댓글 모달 ── */}
+      {commentTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setCommentTask(null)}
+        >
+          <div
+            className="bg-surface rounded-2xl shadow-2xl border border-line w-[420px] max-h-[580px] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-line shrink-0">
+              <MessageSquare size={14} className="text-primary" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-content truncate">{commentTask.task_name}</p>
+                <p className="text-[10px] text-content-muted font-mono">{commentTask.wbs_code}</p>
+              </div>
+              <button
+                onClick={() => setCommentTask(null)}
+                className="p-1 rounded-lg text-content-muted hover:bg-surface-hover hover:text-content transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            {/* 댓글 스레드 */}
+            <CommentThread
+              projectId={projectId!}
+              targetType="task"
+              targetId={commentTask.id}
+              maxHeight={500}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
