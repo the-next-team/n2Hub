@@ -128,7 +128,7 @@ export default function DocumentList() {
 
       {/* 에러 */}
       {error && (
-        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">{error}</div>
+        <div className="mb-4 p-3 text-sm text-danger bg-danger-soft border border-danger/20 rounded-lg">{error}</div>
       )}
 
       {/* 새 폴더 입력 */}
@@ -272,7 +272,7 @@ function FolderRow({ item, onOpen, onDelete }: {
             onClick={e => { e.stopPropagation(); onDelete(item) }}
             aria-label="삭제"
             title="삭제"
-            className="p-1.5 text-content-subtle hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            className="p-1.5 text-content-subtle hover:text-danger hover:bg-danger-soft rounded-md transition-colors"
           >
             <Trash2 size={15} />
           </button>
@@ -314,7 +314,7 @@ function FileRow({ item, onDownload, onDelete, onOpen }: {
             onClick={e => { e.stopPropagation(); onOpen() }}
             aria-label="열기"
             title="열기"
-            className="p-1.5 text-content-subtle hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+            className="p-1.5 text-content-subtle hover:text-success hover:bg-success-soft rounded-md transition-colors"
           >
             <ExternalLink size={15} />
           </button>
@@ -330,7 +330,7 @@ function FileRow({ item, onDownload, onDelete, onOpen }: {
             onClick={e => { e.stopPropagation(); onDelete(item) }}
             aria-label="삭제"
             title="삭제"
-            className="p-1.5 text-content-subtle hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            className="p-1.5 text-content-subtle hover:text-danger hover:bg-danger-soft rounded-md transition-colors"
           >
             <Trash2 size={15} />
           </button>

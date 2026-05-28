@@ -115,7 +115,7 @@ export default function FileViewer() {
   if (error || !meta || !buffer) {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4">
-        <p className="text-red-500 text-sm">{error ?? '알 수 없는 오류'}</p>
+        <p className="text-danger text-sm">{error ?? '알 수 없는 오류'}</p>
         <Button variant="secondary" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} />
           돌아가기
