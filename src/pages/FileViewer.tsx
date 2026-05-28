@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Download, Loader2, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Download, Loader2, ArrowLeft, FileDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SpreadsheetEditor from '../components/editor/SpreadsheetEditor'
 import DocEditor from '../components/editor/DocEditor'
 import { Button } from '../components/ui'
+import { useSettings } from '../hooks/useSettings'
+import CoverPage, { type CoverMeta } from '../components/CoverPage'
 
 interface FileMeta {
   id: string
@@ -13,6 +15,21 @@ interface FileMeta {
   mime_type: string
   size: number
   project_id: string
+}
+
+/** 파일명에서 표지 메타데이터 파싱
+ *  예: "FNDB-01-PP-010. 사업수행계획서_v0.1.docx"
+ *      → { code: 'FNDB-01-PP-010', title: '사업수행계획서', version: 'v0.1' }
+ */
+function parseCoverMeta(filename: string): Pick<CoverMeta, 'code' | 'title' | 'version'> {
+  const nameWithoutExt = filename.replace(/\.[^.]+$/, '')
+  // 패턴 1: CODE. 제목_vX.X
+  const m1 = /^([A-Z0-9]+-\d+-[A-Z]+-\d+)\.\s*(.+?)(?:_v([\d.]+))?$/.exec(nameWithoutExt)
+  if (m1) return { code: m1[1], title: m1[2].trim(), version: m1[3] ? `v${m1[3]}` : undefined }
+  // 패턴 2: 제목_vX.X
+  const m2 = /^(.+?)_v([\d.]+)$/.exec(nameWithoutExt)
+  if (m2) return { title: m2[1].trim(), version: `v${m2[2]}` }
+  return { title: nameWithoutExt }
 }
 
 function getFileType(name: string, mimeType: string): 'xlsx' | 'docx' | 'pdf' | 'other' {
@@ -31,6 +48,9 @@ export default function FileViewer() {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [projectName, setProjectName] = useState<string>('')
+  const [withCover, setWithCover] = useState(false)
+  const { settings } = useSettings()
 
   useEffect(() => {
     if (!fileId) return
@@ -73,6 +93,24 @@ export default function FileViewer() {
 
     return () => { cancelled = true }
   }, [fileId])
+
+  // 프로젝트명 조회
+  useEffect(() => {
+    if (!projectId) return
+    supabase.from('projects').select('name').eq('id', projectId).single()
+      .then(({ data }) => { if (data) setProjectName(data.name) })
+  }, [projectId])
+
+  // 표지 포함 PDF 내보내기
+  const handlePrintWithCover = () => {
+    setWithCover(true)
+    // DOM 업데이트 후 인쇄 대화상자 열기
+    setTimeout(() => {
+      const cleanup = () => { setWithCover(false); window.removeEventListener('afterprint', cleanup) }
+      window.addEventListener('afterprint', cleanup)
+      window.print()
+    }, 150)
+  }
 
   // 원본 파일 다운로드
   const handleDownload = async () => {
@@ -125,11 +163,18 @@ export default function FileViewer() {
   }
 
   const fileType = getFileType(meta.original_name, meta.mime_type)
+  const coverMeta: CoverMeta = {
+    ...parseCoverMeta(meta.original_name),
+    projectName,
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* 표지 (화면 숨김, 인쇄 시 표시) */}
+      {withCover && <CoverPage meta={coverMeta} settings={settings} />}
+
       {/* 상단 브레드크럼 바 */}
-      <div className="flex items-center gap-2 text-xs text-content-muted px-4 py-2 border-b border-line bg-canvas shrink-0">
+      <div className="flex items-center gap-2 text-xs text-content-muted px-4 py-2 border-b border-line bg-canvas shrink-0 print:hidden">
         <Link to="/projects" className="hover:text-content">프로젝트</Link>
         <ChevronRight size={12} />
         <Link to={`/projects/${projectId}`} className="hover:text-content">프로젝트 상세</Link>
@@ -137,6 +182,15 @@ export default function FileViewer() {
         <Link to={`/projects/${projectId}/documents`} className="hover:text-content">산출물 목록</Link>
         <ChevronRight size={12} />
         <span className="text-content font-medium truncate max-w-xs">{meta.original_name}</span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handlePrintWithCover}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-line hover:border-primary/40 hover:bg-primary-soft text-content-muted hover:text-primary transition-colors"
+          >
+            <FileDown size={12} />
+            <span>표지 포함 PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* 에디터 / 뷰어 영역 */}

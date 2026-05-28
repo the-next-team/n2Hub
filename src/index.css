@@ -185,3 +185,42 @@
   pointer-events: none;
   height: 0;
 }
+
+/* ── 인쇄(PDF) 스타일 ────────────────────────────────────── */
+@media print {
+  /* 레이아웃 사이드바, 탐색바 숨기기 */
+  nav,
+  aside,
+  [data-sidebar],
+  .no-print {
+    display: none !important;
+  }
+
+  /* 표지 페이지: 전체 높이, 다음 페이지로 강제 브레이크 */
+  .cover-page {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100vh;
+    padding: 5rem 4rem;
+    background: white;
+    break-after: page;
+    page-break-after: always; /* 레거시 브라우저 호환 */
+  }
+
+  /* 페이지 여백 */
+  @page {
+    margin: 1.5cm 2cm;
+  }
+
+  /* 표지는 여백 없이 */
+  @page :first {
+    margin: 0;
+  }
+
+  /* 링크 밑줄 제거 */
+  a {
+    text-decoration: none !important;
+  }
+}
