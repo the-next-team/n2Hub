@@ -1,21 +1,14 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
-  ChevronRight,
-  Upload,
-  Download,
-  Trash2,
-  FileText,
-  FileSpreadsheet,
-  Presentation,
-  File,
-  Folder,
-  FolderPlus,
-  Loader2,
-  Home,
-  ExternalLink,
+  ChevronRight, ChevronDown,
+  Upload, Download, Trash2,
+  FileText, FileSpreadsheet, Presentation, File,
+  Folder, FolderOpen, FolderPlus,
+  Loader2, ExternalLink,
 } from 'lucide-react'
-import { useFiles } from '../hooks/useFiles'
+import { useFileTree, getItemPath } from '../hooks/useFileTree'
+import type { FlatNode } from '../hooks/useFileTree'
 import type { StorageItem } from '../hooks/useFiles'
 import { Button, PageHeader } from '../components/ui'
 
@@ -35,33 +28,39 @@ function formatDate(iso?: string): string {
 
 function FileIcon({ name, mimeType }: { name: string; mimeType?: string }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="text-primary" />
-  if (ext === 'xlsx' || ext === 'xls') return <FileSpreadsheet size={18} className="text-green-500" />
-  if (ext === 'pptx' || ext === 'ppt') return <Presentation size={18} className="text-orange-500" />
-  if (ext === 'pdf' || mimeType === 'application/pdf') return <FileText size={18} className="text-red-500" />
-  return <File size={18} className="text-content-subtle" />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={16} className="text-primary" />
+  if (ext === 'xlsx' || ext === 'xls') return <FileSpreadsheet size={16} className="text-green-500" />
+  if (ext === 'pptx' || ext === 'ppt') return <Presentation size={16} className="text-orange-500" />
+  if (ext === 'pdf' || mimeType === 'application/pdf') return <FileText size={16} className="text-red-500" />
+  return <File size={16} className="text-content-subtle" />
 }
 
 export default function DocumentList() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const {
-    items, loading, uploading, error,
-    currentPath,
-    navigateTo, navigateUp, navigateToIndex, navigateToRoot,
-    createFolder, uploadFiles, downloadFile, deleteItem,
-  } = useFiles(id!)
+    getFlatList, openPaths, loadingPaths, initialLoading, uploading, error, setError,
+    rootStats, toggleFolder, uploadFiles, createFolder, downloadFile, deleteItem,
+  } = useFileTree(id!)
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const uploadTargetRef = useRef<string>('')
+
   const [dragOver, setDragOver] = useState(false)
-  const [showNewFolder, setShowNewFolder] = useState(false)
-  const [newFolderName, setNewFolderName] = useState('')
+  const [newFolderState, setNewFolderState] = useState<{ targetPath: string; value: string } | null>(null)
   const [creatingFolder, setCreatingFolder] = useState(false)
+
+  const nodes = useMemo(() => getFlatList(), [getFlatList])
+
+  const triggerUpload = useCallback((targetPath: string) => {
+    uploadTargetRef.current = targetPath
+    inputRef.current?.click()
+  }, [])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files)
+    if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files, '')
   }, [uploadFiles])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -76,23 +75,19 @@ export default function DocumentList() {
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      uploadFiles(e.target.files)
+      uploadFiles(e.target.files, uploadTargetRef.current)
       e.target.value = ''
     }
   }, [uploadFiles])
 
   async function handleCreateFolder(e: React.FormEvent) {
     e.preventDefault()
-    if (!newFolderName.trim()) return
+    if (!newFolderState?.value.trim()) return
     setCreatingFolder(true)
-    await createFolder(newFolderName)
+    const ok = await createFolder(newFolderState.value, newFolderState.targetPath)
     setCreatingFolder(false)
-    setNewFolderName('')
-    setShowNewFolder(false)
+    if (ok) setNewFolderState(null)
   }
-
-  const folders = items.filter(i => i.isFolder)
-  const files   = items.filter(i => !i.isFolder)
 
   return (
     <div className="p-8">
@@ -105,17 +100,20 @@ export default function DocumentList() {
         <span className="text-content">산출물 목록</span>
       </div>
 
-      {/* 헤더 */}
       <PageHeader
         title="산출물 목록"
-        description={loading ? '불러오는 중...' : `폴더 ${folders.length}개 · 파일 ${files.length}개`}
+        description={
+          initialLoading
+            ? '불러오는 중...'
+            : `폴더 ${rootStats.folders}개 · 파일 ${rootStats.files}개`
+        }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setShowNewFolder(true)}>
+            <Button variant="secondary" onClick={() => setNewFolderState({ targetPath: '', value: '' })}>
               <FolderPlus size={16} />
               새 폴더
             </Button>
-            <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+            <Button onClick={() => triggerUpload('')} disabled={uploading}>
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
               {uploading ? '업로드 중...' : '파일 올리기'}
             </Button>
@@ -123,35 +121,53 @@ export default function DocumentList() {
         }
       />
 
-      {/* 숨김 input */}
-      <input ref={inputRef} type="file" multiple accept={ACCEPT_TYPES} className="hidden" onChange={handleInputChange} />
+      {/* 숨김 파일 input */}
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={ACCEPT_TYPES}
+        className="hidden"
+        onChange={handleInputChange}
+      />
 
       {/* 에러 */}
       {error && (
-        <div className="mb-4 p-3 text-sm text-danger bg-danger-soft border border-danger/20 rounded-lg">{error}</div>
+        <div className="mb-4 p-3 text-sm text-danger bg-danger-soft border border-danger/20 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-danger hover:opacity-70 ml-4">✕</button>
+        </div>
       )}
 
-      {/* 새 폴더 입력 */}
-      {showNewFolder && (
-        <form onSubmit={handleCreateFolder} className="mb-4 flex items-center gap-2">
+      {/* 새 폴더 입력 폼 */}
+      {newFolderState && (
+        <form onSubmit={handleCreateFolder}
+          className="mb-4 flex items-center gap-2 px-4 py-3 bg-surface rounded-xl border border-line"
+        >
+          <Folder size={15} className="text-yellow-400 shrink-0" />
+          <span className="text-sm text-content-muted shrink-0">
+            {newFolderState.targetPath
+              ? `"${newFolderState.targetPath.split('/').pop()}" 안에`
+              : '루트에'}
+          </span>
+          <ChevronRight size={13} className="text-content-subtle shrink-0" />
           <input
             autoFocus
             type="text"
-            value={newFolderName}
-            onChange={e => setNewFolderName(e.target.value)}
+            value={newFolderState.value}
+            onChange={e => setNewFolderState(s => s ? { ...s, value: e.target.value } : s)}
             placeholder="폴더명 입력..."
-            className="px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-56"
+            className="px-3 py-1.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-52"
           />
-          <Button type="submit" size="sm" disabled={creatingFolder || !newFolderName.trim()}>
+          <Button type="submit" size="sm" disabled={creatingFolder || !newFolderState.value.trim()}>
             {creatingFolder ? <Loader2 size={14} className="animate-spin" /> : '생성'}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNewFolder(false); setNewFolderName('') }}>
-            취소
-          </Button>
+          <Button type="button" variant="ghost" size="sm"
+            onClick={() => setNewFolderState(null)}>취소</Button>
         </form>
       )}
 
-      {/* 경로 네비게이션 */}
+      {/* 트리 뷰 */}
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -160,34 +176,11 @@ export default function DocumentList() {
           dragOver ? 'border-primary bg-primary-soft' : 'border-line bg-surface'
         }`}
       >
-        {/* 경로 바 */}
-        <div className="flex items-center gap-1 px-4 py-2.5 border-b border-line bg-canvas text-sm flex-wrap">
-          <button
-            onClick={navigateToRoot}
-            className="flex items-center gap-1 text-content-muted hover:text-primary transition-colors"
-          >
-            <Home size={14} />
-            <span>루트</span>
-          </button>
-          {currentPath.map((segment, idx) => (
-            <span key={idx} className="flex items-center gap-1">
-              <ChevronRight size={14} className="text-content-subtle" />
-              <button
-                onClick={() => navigateToIndex(idx)}
-                className="text-content-muted hover:text-primary transition-colors truncate max-w-[140px]"
-              >
-                {segment}
-              </button>
-            </span>
-          ))}
-        </div>
-
-        {/* 목록 */}
-        {loading ? (
-          <div className="p-8 flex justify-center">
+        {initialLoading ? (
+          <div className="p-12 flex justify-center">
             <Loader2 size={24} className="animate-spin text-content-subtle" />
           </div>
-        ) : items.length === 0 ? (
+        ) : nodes.length === 0 ? (
           <div className="py-20 flex flex-col items-center gap-3 text-center">
             <Upload size={40} className={dragOver ? 'text-primary' : 'text-content-subtle'} />
             <p className="text-content-subtle font-medium">
@@ -199,39 +192,37 @@ export default function DocumentList() {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b border-line">
+            <thead className="border-b border-line bg-canvas">
               <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-8"></th>
                 <th className="text-left px-4 py-2.5 font-medium text-content-muted">이름</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted">버전</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted">크기</th>
-                <th className="text-left px-4 py-2.5 font-medium text-content-muted">날짜</th>
-                <th className="px-4 py-2.5 w-20"></th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-20">버전</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-24">크기</th>
+                <th className="text-left px-4 py-2.5 font-medium text-content-muted w-32">날짜</th>
+                <th className="px-4 py-2.5 w-24" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {/* 상위 폴더로 이동 */}
-              {currentPath.length > 0 && (
-                <tr
-                  className="hover:bg-surface-hover cursor-pointer transition-colors"
-                  onClick={navigateUp}
-                >
-                  <td className="px-4 py-3">
-                    <Folder size={18} className="text-yellow-400" />
-                  </td>
-                  <td className="px-4 py-3 text-content-muted font-medium" colSpan={5}>..</td>
-                </tr>
-              )}
-              {items.map(item =>
-                item.isFolder ? (
-                  <FolderRow key={item.name} item={item} onOpen={navigateTo} onDelete={deleteItem} />
+              {nodes.map(node =>
+                node.item.isFolder ? (
+                  <FolderRow
+                    key={node.item.id}
+                    node={node}
+                    isOpen={openPaths.has(getItemPath(node.item, node.parentPath))}
+                    isLoading={loadingPaths.has(getItemPath(node.item, node.parentPath))}
+                    onToggle={() => toggleFolder(node.item, node.parentPath)}
+                    onDelete={() => deleteItem(node.item, node.parentPath)}
+                    onUploadHere={() => triggerUpload(getItemPath(node.item, node.parentPath))}
+                    onNewFolderHere={() =>
+                      setNewFolderState({ targetPath: getItemPath(node.item, node.parentPath), value: '' })
+                    }
+                  />
                 ) : (
                   <FileRow
-                    key={item.name}
-                    item={item}
-                    onDownload={downloadFile}
-                    onDelete={deleteItem}
-                    onOpen={() => navigate(`/projects/${id}/view/${item.id}`)}
+                    key={node.item.id}
+                    node={node}
+                    onDownload={() => downloadFile(node.item)}
+                    onDelete={() => deleteItem(node.item, node.parentPath)}
+                    onOpen={() => navigate(`/projects/${id}/view/${node.item.id}`)}
                   />
                 )
               )}
@@ -239,10 +230,9 @@ export default function DocumentList() {
           </table>
         )}
 
-        {/* 드래그 오버레이 안내 */}
-        {dragOver && items.length > 0 && (
+        {dragOver && nodes.length > 0 && (
           <div className="px-4 py-3 text-center text-sm text-primary font-medium border-t border-primary/20 bg-primary-soft">
-            현재 폴더에 파일을 업로드합니다
+            루트 폴더에 파일을 업로드합니다
           </div>
         )}
       </div>
@@ -250,31 +240,68 @@ export default function DocumentList() {
   )
 }
 
-function FolderRow({ item, onOpen, onDelete }: {
-  item: StorageItem
-  onOpen: (name: string) => void
-  onDelete: (item: StorageItem) => void
+/* ── 폴더 행 ── */
+function FolderRow({ node, isOpen, isLoading, onToggle, onDelete, onUploadHere, onNewFolderHere }: {
+  node: FlatNode
+  isOpen: boolean
+  isLoading: boolean
+  onToggle: () => void
+  onDelete: () => void
+  onUploadHere: () => void
+  onNewFolderHere: () => void
 }) {
+  const indent = node.depth * 20
+
   return (
     <tr
       className="hover:bg-surface-hover cursor-pointer transition-colors group"
-      onClick={() => onOpen(item.name)}
+      onClick={onToggle}
     >
-      <td className="px-4 py-3">
-        <Folder size={18} className="text-yellow-400" />
+      <td className="px-4 py-2.5" style={{ paddingLeft: `${16 + indent}px` }}>
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-content-subtle w-4 flex items-center justify-center">
+            {isLoading
+              ? <Loader2 size={13} className="animate-spin" />
+              : isOpen
+                ? <ChevronDown size={13} />
+                : <ChevronRight size={13} />
+            }
+          </span>
+          {isOpen
+            ? <FolderOpen size={16} className="shrink-0 text-yellow-400" />
+            : <Folder size={16} className="shrink-0 text-yellow-400" />
+          }
+          <span className="font-medium text-content">{node.item.name}</span>
+        </div>
       </td>
-      <td className="px-4 py-3 font-medium text-content" colSpan={4}>
-        {item.name}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
+      <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
+      <td className="px-4 py-2.5 text-content-subtle text-xs">—</td>
+      <td className="px-4 py-2.5">
+        <div
+          className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={e => e.stopPropagation()}
+        >
           <button
-            onClick={e => { e.stopPropagation(); onDelete(item) }}
-            aria-label="삭제"
-            title="삭제"
-            className="p-1.5 text-content-subtle hover:text-danger hover:bg-danger-soft rounded-md transition-colors"
+            onClick={onNewFolderHere}
+            title="하위 폴더 생성"
+            className="p-1.5 rounded-md text-content-subtle hover:text-primary hover:bg-primary-soft transition-colors"
           >
-            <Trash2 size={15} />
+            <FolderPlus size={14} />
+          </button>
+          <button
+            onClick={onUploadHere}
+            title="이 폴더에 업로드"
+            className="p-1.5 rounded-md text-content-subtle hover:text-primary hover:bg-primary-soft transition-colors"
+          >
+            <Upload size={14} />
+          </button>
+          <button
+            onClick={onDelete}
+            title="폴더 삭제"
+            className="p-1.5 rounded-md text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors"
+          >
+            <Trash2 size={14} />
           </button>
         </div>
       </td>
@@ -282,57 +309,68 @@ function FolderRow({ item, onOpen, onDelete }: {
   )
 }
 
-function FileRow({ item, onDownload, onDelete, onOpen }: {
-  item: StorageItem
-  onDownload: (item: StorageItem) => void
-  onDelete: (item: StorageItem) => void
+/* ── 파일 행 ── */
+function FileRow({ node, onDownload, onDelete, onOpen }: {
+  node: FlatNode
+  onDownload: () => void
+  onDelete: () => void
   onOpen: () => void
 }) {
+  const item: StorageItem = node.item
+  const indent = node.depth * 20
+
   return (
-    <tr className="hover:bg-surface-hover transition-colors group cursor-pointer" onClick={onOpen}>
-      <td className="px-4 py-3">
-        <FileIcon name={item.name} mimeType={item.mimeType} />
+    <tr
+      className="hover:bg-surface-hover transition-colors group cursor-pointer"
+      onClick={onOpen}
+    >
+      <td className="px-4 py-2.5" style={{ paddingLeft: `${16 + indent}px` }}>
+        <div className="flex items-center gap-2">
+          {/* 파일은 chevron 너비만큼 공간 확보 */}
+          <span className="w-4 shrink-0" />
+          <FileIcon name={item.name} mimeType={item.mimeType} />
+          <div className="min-w-0">
+            <div className="font-medium text-content truncate">{item.title ?? item.name}</div>
+            {item.title && item.title !== item.name && (
+              <div className="text-xs text-content-subtle truncate max-w-xs">{item.name}</div>
+            )}
+          </div>
+        </div>
       </td>
-      <td className="px-4 py-3">
-        <div className="font-medium text-content">{item.title ?? item.name}</div>
-        {item.title && item.title !== item.name && (
-          <div className="text-xs text-content-subtle mt-0.5 truncate max-w-xs">{item.name}</div>
-        )}
-      </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-2.5">
         {item.version && (
           <span className="inline-block px-2 py-0.5 rounded-full text-xs font-mono bg-surface-hover text-content-muted">
             {item.version}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-content-muted">{formatFileSize(item.size)}</td>
-      <td className="px-4 py-3 text-content-muted">{formatDate(item.createdAt)}</td>
-      <td className="px-4 py-3">
-        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <td className="px-4 py-2.5 text-content-muted text-xs">{formatFileSize(item.size)}</td>
+      <td className="px-4 py-2.5 text-content-muted text-xs">{formatDate(item.createdAt)}</td>
+      <td className="px-4 py-2.5">
+        <div
+          className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={e => e.stopPropagation()}
+        >
           <button
-            onClick={e => { e.stopPropagation(); onOpen() }}
-            aria-label="열기"
+            onClick={onOpen}
             title="열기"
-            className="p-1.5 text-content-subtle hover:text-success hover:bg-success-soft rounded-md transition-colors"
+            className="p-1.5 rounded-md text-content-subtle hover:text-success hover:bg-success-soft transition-colors"
           >
-            <ExternalLink size={15} />
+            <ExternalLink size={14} />
           </button>
           <button
-            onClick={e => { e.stopPropagation(); onDownload(item) }}
-            aria-label="다운로드"
+            onClick={onDownload}
             title="다운로드"
-            className="p-1.5 text-content-subtle hover:text-primary hover:bg-primary-soft rounded-md transition-colors"
+            className="p-1.5 rounded-md text-content-subtle hover:text-primary hover:bg-primary-soft transition-colors"
           >
-            <Download size={15} />
+            <Download size={14} />
           </button>
           <button
-            onClick={e => { e.stopPropagation(); onDelete(item) }}
-            aria-label="삭제"
+            onClick={onDelete}
             title="삭제"
-            className="p-1.5 text-content-subtle hover:text-danger hover:bg-danger-soft rounded-md transition-colors"
+            className="p-1.5 rounded-md text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors"
           >
-            <Trash2 size={15} />
+            <Trash2 size={14} />
           </button>
         </div>
       </td>
