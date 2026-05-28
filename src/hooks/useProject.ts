@@ -20,6 +20,7 @@ function mapProject(row: any): Project {
     startDate: row.start_date || '',
     endDate: row.end_date || '',
     status: row.status,
+    createdBy: row.created_by || '',
     createdAt: row.created_at,
   }
 }
