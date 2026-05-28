@@ -258,7 +258,7 @@ export default function DocumentEditor() {
           <div className="bg-surface rounded-xl shadow-modal w-full max-w-2xl flex flex-col max-h-[80vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
               <h2 className="text-lg font-semibold text-content flex items-center gap-2">
-                <Sparkles size={18} className="text-purple-600" />
+                <Sparkles size={18} className="text-purple-600 dark:text-purple-400" />
                 AI 초안 생성
               </h2>
               <button

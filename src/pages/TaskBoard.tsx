@@ -234,7 +234,7 @@ function GroupRow({
       </td>
       <td className="px-3 py-3" />
       <td className="px-3 py-3 text-xs text-content-muted">
-        완료 {done} / 지연 <span className={delayed > 0 ? 'text-red-500 font-medium' : ''}>{delayed}</span>
+        완료 {done} / 지연 <span className={delayed > 0 ? 'text-danger font-medium' : ''}>{delayed}</span>
       </td>
       <td className="px-3 py-3" />
     </tr>
@@ -310,10 +310,10 @@ function ImportModal({
           <p className="text-sm text-content-muted mb-4">
             이 프로젝트에 업로드된 Excel 파일을 선택하면 Schedule 시트에서 작업을 가져옵니다.
             <br />
-            <span className="text-orange-600 font-medium">주의: 기존 작업 목록이 교체됩니다.</span>
+            <span className="text-warning font-medium">주의: 기존 작업 목록이 교체됩니다.</span>
           </p>
           {fetchError && (
-            <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg">{fetchError}</div>
+            <div className="mb-4 p-3 text-sm text-danger bg-danger-soft border border-danger/20 rounded-lg">{fetchError}</div>
           )}
           {loadingFiles ? (
             <div className="flex justify-center py-8">
@@ -450,7 +450,7 @@ export default function TaskBoard() {
 
       {/* 에러 */}
       {(error || importError) && (
-        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30 flex items-center gap-2">
+        <div className="mb-4 p-3 text-sm text-danger bg-danger-soft border border-danger/20 rounded-lg flex items-center gap-2">
           <AlertCircle size={15} />
           {error || importError}
         </div>
