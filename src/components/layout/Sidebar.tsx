@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FolderKanban, FileText, Settings,
   PanelLeftClose, PanelLeft, X,
   ChevronRight, ChevronDown, Folder, FolderOpen,
-  ClipboardList, Users, Plus, Loader2,
+  ClipboardList, Users, Plus, Loader2, BarChart2,
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { useProjects } from '../../hooks/useProject'
@@ -309,6 +309,21 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                               >
                                 <ClipboardList size={11} className="shrink-0" />
                                 <span>WBS 작업관리</span>
+                              </NavLink>
+
+                              {/* 간트 차트 */}
+                              <NavLink
+                                to={`/projects/${project.id}/gantt`}
+                                onClick={onCloseMobile}
+                                className={({ isActive: a }) => cn(
+                                  'flex items-center gap-1.5 rounded px-1 py-1 text-xs transition-colors',
+                                  a
+                                    ? 'bg-primary-soft font-medium text-primary'
+                                    : 'text-content-muted hover:bg-surface-hover hover:text-content'
+                                )}
+                              >
+                                <BarChart2 size={11} className="shrink-0" />
+                                <span>간트 차트</span>
                               </NavLink>
 
                               {/* 멤버 */}

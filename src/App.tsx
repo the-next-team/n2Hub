@@ -8,6 +8,7 @@ import DocumentList from './pages/DocumentList'
 import DocumentEditor from './pages/DocumentEditor'
 import FileViewer from './pages/FileViewer'
 import TaskBoard from './pages/TaskBoard'
+import GanttChart from './pages/GanttChart'
 import MemberManage from './pages/MemberManage'
 import TemplateManager from './pages/TemplateManager'
 import Settings from './pages/Settings'
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/projects/:id/documents" element={<DocumentList />} />
               <Route path="/projects/:id/view/:fileId" element={<FileViewer />} />
               <Route path="/projects/:id/tasks" element={<TaskBoard />} />
+              <Route path="/projects/:id/gantt" element={<GanttChart />} />
               <Route path="/projects/:id/members" element={<MemberManage />} />
               <Route path="/documents/:docId" element={<DocumentEditor />} />
               <Route path="/templates" element={<TemplateManager />} />

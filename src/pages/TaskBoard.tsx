@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ChevronRight, ClipboardList, AlertCircle, CheckCircle2,
   Clock, Loader2, Upload, X, User, ChevronDown, ChevronUp,
-  FileSpreadsheet, RefreshCw, Crown, Lock,
+  FileSpreadsheet, RefreshCw, Crown, Lock, BarChart2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -484,13 +484,23 @@ export default function TaskBoard() {
             }
           </p>
         </div>
-        {isPM && (
-          <button onClick={() => setShowImport(true)} disabled={importing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
-            {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-            {importing ? '가져오는 중...' : 'WBS 가져오기'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* 간트 차트 링크 */}
+          <Link
+            to={`/projects/${projectId}/gantt`}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+          >
+            <BarChart2 size={15} />
+            간트 차트
+          </Link>
+          {isPM && (
+            <button onClick={() => setShowImport(true)} disabled={importing}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+              {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+              {importing ? '가져오는 중...' : 'WBS 가져오기'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 에러 */}
