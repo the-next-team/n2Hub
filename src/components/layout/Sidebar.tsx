@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, FileText, Settings,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { useProjects } from '../../hooks/useProject'
+import { supabase } from '../../lib/supabase'
 
 type Props = {
   collapsed: boolean
@@ -16,27 +17,131 @@ type Props = {
   onCloseMobile: () => void
 }
 
-const SUB_ITEMS = [
-  { label: '산출물 목록',   icon: FileText,       suffix: '/documents' },
-  { label: 'WBS 작업관리', icon: ClipboardList,  suffix: '/tasks' },
-  { label: '멤버 관리',    icon: Users,          suffix: '/members' },
-]
+/* ── 사이드바 파일트리 ── */
+
+type SFNode = { id: string; name: string; isFolder: boolean }
+
+function SidebarFileTree({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const [pathItems, setPathItems] = useState<Map<string, SFNode[]>>(new Map())
+  const [openPaths, setOpenPaths] = useState<Set<string>>(new Set())
+  const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set())
+  const [ready, setReady] = useState(false)
+
+  const load = useCallback(async (path: string) => {
+    setLoadingPaths(p => new Set([...p, path]))
+    try {
+      const { data } = await supabase
+        .from('files')
+        .select('id, original_name, mime_type')
+        .eq('project_id', projectId)
+        .eq('folder_path', path)
+        .order('mime_type', { ascending: false })
+        .order('original_name', { ascending: true })
+      setPathItems(p => new Map([...p, [path, (data || []).map(r => ({
+        id: r.id,
+        name: r.original_name,
+        isFolder: r.mime_type === 'folder',
+      }))]]))
+    } finally {
+      setLoadingPaths(p => { const n = new Set(p); n.delete(path); return n })
+      if (path === '') setReady(true)
+    }
+  }, [projectId])
+
+  useEffect(() => { load('') }, [load])
+
+  const toggle = useCallback(async (itemPath: string) => {
+    if (openPaths.has(itemPath)) {
+      setOpenPaths(p => {
+        const n = new Set(p)
+        for (const x of [...n]) {
+          if (x === itemPath || x.startsWith(itemPath + '/')) n.delete(x)
+        }
+        return n
+      })
+    } else {
+      setOpenPaths(p => new Set([...p, itemPath]))
+      if (!pathItems.has(itemPath)) await load(itemPath)
+    }
+  }, [openPaths, pathItems, load])
+
+  function renderNodes(parent: string, depth: number): React.ReactNode {
+    return (pathItems.get(parent) || []).map(node => {
+      const nodePath = parent ? `${parent}/${node.name}` : node.name
+      const isOpen = openPaths.has(nodePath)
+      const isLoading = loadingPaths.has(nodePath)
+      const pl = depth * 10 + 4
+
+      if (node.isFolder) {
+        return (
+          <div key={node.id}>
+            <button
+              onClick={() => toggle(nodePath)}
+              style={{ paddingLeft: pl }}
+              className="flex w-full items-center gap-1 py-[3px] rounded text-xs text-content-muted hover:bg-surface-hover hover:text-content transition-colors"
+            >
+              <span className="shrink-0 w-3 flex items-center justify-center">
+                {isLoading
+                  ? <Loader2 size={9} className="animate-spin" />
+                  : isOpen ? <ChevronDown size={9} /> : <ChevronRight size={9} />}
+              </span>
+              {isOpen
+                ? <FolderOpen size={11} className="shrink-0 text-yellow-400" />
+                : <Folder size={11} className="shrink-0 text-yellow-400" />}
+              <span className="truncate">{node.name}</span>
+            </button>
+            {isOpen && renderNodes(nodePath, depth + 1)}
+          </div>
+        )
+      }
+
+      return (
+        <NavLink
+          key={node.id}
+          to={`/projects/${projectId}/view/${node.id}`}
+          onClick={onClose}
+          style={{ paddingLeft: pl + 13 }}
+          className={({ isActive }) => cn(
+            'flex items-center gap-1.5 py-[3px] rounded text-xs transition-colors',
+            isActive
+              ? 'text-primary font-medium bg-primary-soft'
+              : 'text-content-muted hover:bg-surface-hover hover:text-content'
+          )}
+        >
+          <FileText size={10} className="shrink-0" />
+          <span className="truncate">{node.name}</span>
+        </NavLink>
+      )
+    })
+  }
+
+  if (!ready) {
+    return (
+      <div className="flex items-center gap-1.5 px-1 py-1 text-xs text-content-subtle">
+        <Loader2 size={10} className="animate-spin" />
+      </div>
+    )
+  }
+
+  const root = pathItems.get('') || []
+  if (!root.length) {
+    return <p className="px-1 py-0.5 text-xs text-content-subtle italic">파일 없음</p>
+  }
+
+  return <div className="space-y-0.5">{renderNodes('', 0)}</div>
+}
+
+/* ── 메인 사이드바 ── */
 
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: Props) {
   const location = useLocation()
   const { projects, loading } = useProjects()
 
-  // 현재 URL에서 프로젝트 ID 추출
   const activeProjectId = location.pathname.match(/\/projects\/([^/]+)/)?.[1] ?? null
-
-  // 열려 있는 프로젝트 set
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
 
-  // 활성 프로젝트는 자동 펼침
   useEffect(() => {
-    if (activeProjectId) {
-      setOpenIds(prev => new Set([...prev, activeProjectId]))
-    }
+    if (activeProjectId) setOpenIds(prev => new Set([...prev, activeProjectId]))
   }, [activeProjectId])
 
   function toggleProject(id: string) {
@@ -82,6 +187,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             </p>
           )}
           <div className="space-y-1">
+
             {/* 대시보드 */}
             <NavLink
               to="/dashboard"
@@ -100,7 +206,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
               {!collapsed && <span>대시보드</span>}
             </NavLink>
 
-            {/* 프로젝트 트리 */}
+            {/* 프로젝트 트리 (확장 상태) */}
             {!collapsed && (
               <div>
                 {/* 프로젝트 헤더 */}
@@ -155,34 +261,70 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                           >
                             {isOpen
                               ? <ChevronDown size={13} className="shrink-0 opacity-60" />
-                              : <ChevronRight size={13} className="shrink-0 opacity-60" />
-                            }
+                              : <ChevronRight size={13} className="shrink-0 opacity-60" />}
                             {isOpen
                               ? <FolderOpen size={14} className="shrink-0" />
-                              : <Folder size={14} className="shrink-0" />
-                            }
+                              : <Folder size={14} className="shrink-0" />}
                             <span className="truncate text-xs">{project.name}</span>
                           </button>
 
-                          {/* 서브메뉴 */}
+                          {/* 서브메뉴: 파일트리 + 링크 */}
                           {isOpen && (
-                            <div className="ml-5 mt-0.5 mb-1 space-y-0.5 border-l border-line pl-2">
-                              {SUB_ITEMS.map(({ label, icon: Icon, suffix }) => (
-                                <NavLink
-                                  key={suffix}
-                                  to={`/projects/${project.id}${suffix}`}
-                                  onClick={onCloseMobile}
-                                  className={({ isActive: a }) => cn(
-                                    'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
-                                    a
-                                      ? 'bg-primary-soft font-medium text-primary'
-                                      : 'text-content-muted hover:bg-surface-hover hover:text-content',
-                                  )}
-                                >
-                                  <Icon size={12} className="shrink-0" />
-                                  <span>{label}</span>
-                                </NavLink>
-                              ))}
+                            <div className="ml-5 mt-0.5 mb-2 border-l border-line pl-2">
+                              {/* 파일 트리 */}
+                              <SidebarFileTree
+                                projectId={project.id}
+                                onClose={onCloseMobile}
+                              />
+
+                              {/* 전체 목록 링크 */}
+                              <NavLink
+                                to={`/projects/${project.id}/documents`}
+                                onClick={onCloseMobile}
+                                end
+                                className={({ isActive: a }) => cn(
+                                  'flex items-center gap-1.5 mt-1 rounded px-1 py-[3px] text-xs transition-colors',
+                                  a
+                                    ? 'text-primary font-medium'
+                                    : 'text-content-subtle hover:text-content hover:bg-surface-hover'
+                                )}
+                              >
+                                <FileText size={10} className="shrink-0" />
+                                <span>전체 목록</span>
+                              </NavLink>
+
+                              {/* 구분선 */}
+                              <div className="my-1.5 border-t border-line" />
+
+                              {/* WBS */}
+                              <NavLink
+                                to={`/projects/${project.id}/tasks`}
+                                onClick={onCloseMobile}
+                                className={({ isActive: a }) => cn(
+                                  'flex items-center gap-1.5 rounded px-1 py-1 text-xs transition-colors',
+                                  a
+                                    ? 'bg-primary-soft font-medium text-primary'
+                                    : 'text-content-muted hover:bg-surface-hover hover:text-content'
+                                )}
+                              >
+                                <ClipboardList size={11} className="shrink-0" />
+                                <span>WBS 작업관리</span>
+                              </NavLink>
+
+                              {/* 멤버 */}
+                              <NavLink
+                                to={`/projects/${project.id}/members`}
+                                onClick={onCloseMobile}
+                                className={({ isActive: a }) => cn(
+                                  'flex items-center gap-1.5 rounded px-1 py-1 text-xs transition-colors',
+                                  a
+                                    ? 'bg-primary-soft font-medium text-primary'
+                                    : 'text-content-muted hover:bg-surface-hover hover:text-content'
+                                )}
+                              >
+                                <Users size={11} className="shrink-0" />
+                                <span>멤버 관리</span>
+                              </NavLink>
                             </div>
                           )}
                         </div>
@@ -193,7 +335,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
               </div>
             )}
 
-            {/* collapsed 상태에서 프로젝트 아이콘만 */}
+            {/* collapsed: 프로젝트 아이콘만 */}
             {collapsed && (
               <NavLink
                 to="/projects"
