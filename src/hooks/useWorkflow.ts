@@ -196,33 +196,77 @@ export function useWorkflow(fileId: string | null, projectId: string | null) {
           .eq('id', fileId)
 
       } else {
-        // ── 파일 없이 전환: original_name의 버전 suffix만 DB에서 교체 ─
-        // Storage 경로는 UUID 기반이므로 변경 불필요, 표시명만 업데이트
+        // ── 파일 없이 전환: old/ 에 스냅샷 남기고 현재 파일명 버전 교체 ─
         const { data: curFile } = await supabase
           .from('files')
-          .select('original_name')
+          .select('original_name, folder_path, storage_path, size, mime_type')
           .eq('id', fileId)
           .single()
 
-        const newOriginalName = curFile
-          ? (() => {
-              const ext      = curFile.original_name.split('.').pop() ?? ''
-              const baseName = curFile.original_name
-                .replace(/\.[^.]+$/, '')       // 확장자 제거
-                .replace(/_v[\d.]+$/i, '')      // 기존 _v0.x 제거
-              return `${baseName}_${step.version}.${ext}`
-            })()
-          : null
+        if (curFile) {
+          const currentFolderPath = curFile.folder_path ?? ''
+          const oldFolderPath     = currentFolderPath ? `${currentFolderPath}/old` : 'old'
+          const ext               = curFile.original_name.split('.').pop() ?? ''
+          const baseName          = curFile.original_name
+            .replace(/\.[^.]+$/, '')
+            .replace(/_v[\d.]+$/i, '')
+          const newOriginalName   = `${baseName}_${step.version}.${ext}`
 
-        await supabase
-          .from('files')
-          .update({
-            workflow_status:  toStatus,
-            workflow_version: step.version,
-            version:          step.version,
-            ...(newOriginalName ? { original_name: newOriginalName } : {}),
-          })
-          .eq('id', fileId)
+          // ── old 폴더 없으면 생성 ──────────────────────────────────
+          const { data: existingOld } = await supabase
+            .from('files')
+            .select('id')
+            .eq('project_id', projectId)
+            .eq('folder_path', currentFolderPath)
+            .eq('original_name', 'old')
+            .eq('mime_type', 'folder')
+            .maybeSingle()
+
+          if (!existingOld) {
+            await supabase.from('files').insert([{
+              project_id:    projectId,
+              original_name: 'old',
+              folder_path:   currentFolderPath,
+              storage_path:  '',
+              size:          0,
+              mime_type:     'folder',
+              version:       '',
+              uploaded_by:   user.id,
+            }])
+          }
+
+          // ── 현재 파일을 old/ 에 스냅샷으로 복사 (같은 storage_path 참조) ─
+          await supabase.from('files').insert([{
+            project_id:       projectId,
+            original_name:    curFile.original_name,   // 이전 버전명 그대로
+            folder_path:      oldFolderPath,
+            storage_path:     curFile.storage_path,    // 같은 Storage 파일 참조
+            size:             curFile.size,
+            mime_type:        curFile.mime_type,
+            version:          currentVersion,
+            uploaded_by:      user.id,
+            workflow_status:  currentStatus,
+            workflow_version: currentVersion,
+            is_superseded:    true,
+          }])
+
+          // ── 현재 파일: 새 버전명 + 상태 업데이트 ─────────────────
+          await supabase
+            .from('files')
+            .update({
+              workflow_status:  toStatus,
+              workflow_version: step.version,
+              version:          step.version,
+              original_name:    newOriginalName,
+            })
+            .eq('id', fileId)
+        } else {
+          // 파일 정보 없으면 상태만 업데이트
+          await supabase
+            .from('files')
+            .update({ workflow_status: toStatus, workflow_version: step.version })
+            .eq('id', fileId)
+        }
       }
 
       // 워크플로우 이력 INSERT
