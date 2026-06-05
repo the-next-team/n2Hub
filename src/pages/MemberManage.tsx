@@ -1,470 +1,597 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ChevronRight, Users, UserPlus, Trash2, Crown,
-  User, Loader2, AlertCircle, Search, X, Pencil, Check,
+  UserPlus, Trash2, Search, X, Pencil, Check, Shield,
+  ClipboardList, Bug, ChevronDown, Loader2, AlertCircle, Plus,
 } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
-import { useMembers } from '../hooks/useMembers'
+import {
+  useMembers, ROLE_CFG,
+  PERMISSION_LABELS, type MemberRole, type ProjectMember,
+} from '../hooks/useMembers'
+import { useRolePermissions } from '../hooks/useRolePermissions'
+import { useProjectParts } from '../hooks/useProjectParts'
 import { useAuth } from '../lib/auth'
-import type { ProjectMember } from '../hooks/useMembers'
+import { PageHeader, Button } from '../components/ui'
+import { cn } from '../utils'
 
-const ROLE_LABEL = { pm: 'PM', member: '멤버' }
-const ROLE_COLOR = {
-  pm:     'bg-blue-100 text-blue-700',
-  member: 'bg-gray-100 text-gray-600',
+// ── 상수 ──────────────────────────────────────────────────────────────────────
+const ROLES: MemberRole[] = ['pm', 'pl', 'developer', 'qa']
+
+// ── 아바타 ─────────────────────────────────────────────────────────────────────
+function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  const COLORS = ['#4f46e5','#0d9488','#d97706','#dc2626','#7c3aed','#0284c7','#15803d']
+  const color  = COLORS[name.charCodeAt(0) % COLORS.length]
+  return (
+    <div className="rounded-full flex items-center justify-center text-white font-bold shrink-0"
+         style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.38 }}>
+      {(name[0] ?? '?').toUpperCase()}
+    </div>
+  )
 }
 
-type ProfileResult = { id: string; email: string; display_name: string | null }
+// ── 파트 관리 ─────────────────────────────────────────────────────────────────
+function PartManager({
+  parts, onAdd, onRemove,
+}: { parts: string[]; onAdd: (n: string) => void; onRemove: (n: string) => void }) {
+  const [input, setInput] = useState('')
+  const [open, setOpen]   = useState(false)
 
-export default function MemberManage() {
-  const { id: projectId } = useParams<{ id: string }>()
-  const { user } = useAuth()
-  const { project } = useProject(projectId!)
-  const {
-    members, loading, error,
-    findUserByEmail, searchProfiles, addMember, updateRole, updateDisplayName, removeMember,
-  } = useMembers(projectId!)
-
-  const myRole = members.find(m => m.user_id === user?.id)?.role
-  const isPM = myRole === 'pm' || project?.createdBy === user?.id
-
-  // 멤버 추가 폼
-  const [email, setEmail]               = useState('')
-  const [role, setRole]                 = useState<'pm' | 'member'>('member')
-  const [displayName, setDisplayName]   = useState('')
-  const [adding, setAdding]             = useState(false)
-  const [addError, setAddError]         = useState<string | null>(null)
-  const [addSuccess, setAddSuccess]     = useState(false)
-
-  // 이메일 자동완성
-  const [suggestions, setSuggestions]   = useState<ProfileResult[]>([])
-  const [showSuggest, setShowSuggest]   = useState(false)
-  const [searching, setSearching]       = useState(false)
-  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wrapperRef                      = useRef<HTMLDivElement>(null)
-
-  // 드롭다운 외부 클릭 시 닫기
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowSuggest(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  function handleEmailChange(val: string) {
-    setEmail(val)
-    setAddError(null)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (val.length < 2) { setSuggestions([]); setShowSuggest(false); return }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true)
-      const results = await searchProfiles(val)
-      setSuggestions(results)
-      setShowSuggest(results.length > 0)
-      setSearching(false)
-    }, 300)
-  }
-
-  function selectSuggestion(p: ProfileResult) {
-    setEmail(p.email)
-    setDisplayName(p.display_name ?? '')
-    setSuggestions([])
-    setShowSuggest(false)
-  }
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email.trim()) return
-    setAdding(true)
-    setAddError(null)
-    setAddSuccess(false)
-    try {
-      const found = await findUserByEmail(email)
-      if (!found) { setAddError('해당 이메일로 가입된 계정이 없습니다.'); return }
-      await addMember(
-        found.id,
-        found.email,
-        role,
-        displayName || found.display_name || undefined,
-        {
-          projectName: project?.name ?? '프로젝트',
-          inviterName: user?.email?.split('@')[0] ?? '팀원',
-        },
-      )
-      setEmail('')
-      setDisplayName('')
-      setRole('member')
-      setAddSuccess(true)
-      setTimeout(() => setAddSuccess(false), 2500)
-    } catch (err) {
-      setAddError((err as Error).message)
-    } finally {
-      setAdding(false)
-    }
+  const handleAdd = () => {
+    if (!input.trim()) return
+    onAdd(input.trim()); setInput('')
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      {/* 브레드크럼 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link to="/projects" className="hover:text-gray-700">프로젝트</Link>
-        <ChevronRight size={14} />
-        <Link to={`/projects/${projectId}`} className="hover:text-gray-700">
-          {project?.name ?? '프로젝트 상세'}
-        </Link>
-        <ChevronRight size={14} />
-        <span className="text-gray-900">멤버 관리</span>
-      </div>
+    <div className="mb-5 bg-surface border border-line rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-content hover:bg-surface-hover transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <ClipboardList size={15} className="text-content-subtle" />
+          개발 파트 관리
+          {parts.length > 0 && (
+            <span className="text-xs font-normal text-content-subtle">{parts.length}개 등록됨</span>
+          )}
+        </span>
+        <ChevronDown size={15} className={cn('text-content-subtle transition-transform', open && 'rotate-180')} />
+      </button>
 
-      {/* 헤더 */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Users size={22} className="text-purple-600" />
-          멤버 관리
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          프로젝트 멤버를 추가하고 역할을 설정합니다. PM은 전체 작업을 수정할 수 있습니다.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg flex items-center gap-2">
-          <AlertCircle size={15} /> {error}
-        </div>
-      )}
-
-      {/* 역할 안내 */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        <div className="border border-blue-200 rounded-xl p-4 bg-blue-50">
-          <div className="flex items-center gap-2 mb-2">
-            <Crown size={16} className="text-blue-600" />
-            <span className="font-semibold text-blue-800 text-sm">PM (프로젝트 매니저)</span>
+      {open && (
+        <div className="px-5 pb-4 border-t border-line">
+          {/* 파트 추가 */}
+          <div className="flex gap-2 mt-3 mb-3">
+            <input
+              value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="새 파트 이름 입력 (예: 뱅킹코어팀, PI팀)"
+              className="flex-1 px-3 py-2 border border-line rounded-lg text-sm bg-canvas focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+            />
+            <button onClick={handleAdd} disabled={!input.trim()}
+              className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-40">
+              <Plus size={14} /> 추가
+            </button>
           </div>
-          <ul className="text-xs text-blue-700 space-y-1">
-            <li>• 전체 WBS 작업 수정</li>
-            <li>• 담당자 지정/변경</li>
-            <li>• WBS 가져오기</li>
-            <li>• 멤버 관리</li>
-          </ul>
-        </div>
-        <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-          <div className="flex items-center gap-2 mb-2">
-            <User size={16} className="text-gray-600" />
-            <span className="font-semibold text-gray-700 text-sm">멤버</span>
-          </div>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• 본인 담당 작업만 진행률 수정</li>
-            <li>• 전체 작업 목록 조회</li>
-            <li>• 산출물 파일 업로드/다운로드</li>
-          </ul>
-        </div>
-      </div>
 
-      {/* 멤버 추가 (PM만) */}
-      {isPM && (
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-          <h2 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <UserPlus size={16} className="text-gray-500" />
-            멤버 추가
-          </h2>
-          <form onSubmit={handleAdd} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              {/* 이메일 + 자동완성 */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">이메일 *</label>
-                <div className="relative" ref={wrapperRef}>
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  {searching && (
-                    <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
-                  )}
-                  {email && !searching && (
-                    <button
-                      type="button"
-                      onClick={() => { setEmail(''); setSuggestions([]); setShowSuggest(false) }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
-                  <input
-                    type="text"
-                    value={email}
-                    onChange={e => handleEmailChange(e.target.value)}
-                    onFocus={() => suggestions.length > 0 && setShowSuggest(true)}
-                    placeholder="이메일 일부를 입력하세요"
-                    autoComplete="off"
-                    className="w-full pl-8 pr-7 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-
-                  {/* 자동완성 드롭다운 */}
-                  {showSuggest && (
-                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                      {suggestions.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onMouseDown={() => selectSuggestion(p)}
-                          className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
-                        >
-                          <div className="text-sm font-medium text-gray-800">
-                            {p.display_name ?? p.email.split('@')[0]}
-                          </div>
-                          <div className="text-xs text-gray-400">{p.email}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+          {/* 등록된 파트 목록 */}
+          {parts.length === 0 ? (
+            <p className="text-xs text-content-subtle italic text-center py-2">등록된 파트가 없습니다.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {parts.map(p => (
+                <div key={p} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft border border-primary/20 text-primary rounded-full text-xs font-medium">
+                  {p}
+                  <button onClick={() => onRemove(p)} className="text-primary/60 hover:text-danger transition-colors ml-0.5">
+                    <X size={11} />
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">표시 이름 (선택)</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="예: 김철수"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              ))}
             </div>
-
-            <div className="flex items-center gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">역할 *</label>
-                <select
-                  value={role}
-                  onChange={e => setRole(e.target.value as 'pm' | 'member')}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="member">멤버</option>
-                  <option value="pm">PM</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                disabled={adding || !email.trim()}
-                className="mt-5 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {adding ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
-                {adding ? '추가 중...' : '추가'}
-              </button>
-            </div>
-
-            {addError && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} /> {addError}
-              </p>
-            )}
-            {addSuccess && (
-              <p className="text-xs text-green-600 font-medium">✓ 멤버가 추가됐습니다.</p>
-            )}
-          </form>
+          )}
         </div>
       )}
+    </div>
+  )
+}
 
-      {/* 멤버 목록 */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">
-            현재 멤버 {loading ? '' : `(${members.length}명)`}
+// ── 역할별 권한 매트릭스 모달 ─────────────────────────────────────────────────
+function RolePermissionModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const { permissions, loading, saving, save, toggle, resetRole } = useRolePermissions(projectId)
+  const resetAll = () => { const roles: MemberRole[] = ['pm', 'pl', 'developer', 'qa']; roles.forEach(resetRole) }
+  const roles: MemberRole[] = ['pm', 'pl', 'developer', 'qa']
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-surface rounded-2xl shadow-modal w-full max-w-2xl animate-fade-in-scale flex flex-col max-h-[90vh]">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
+          <h2 className="text-base font-semibold text-content flex items-center gap-2">
+            <Shield size={16} className="text-primary" /> 역할별 권한 설정
           </h2>
+          <button onClick={onClose} className="text-content-subtle hover:text-content"><X size={18} /></button>
         </div>
 
+        {/* 매트릭스 */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 size={24} className="animate-spin text-gray-300" />
-          </div>
-        ) : members.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">
-            <Users size={36} className="mx-auto mb-2 text-gray-200" />
-            아직 추가된 멤버가 없습니다.
-          </div>
+          <div className="flex justify-center py-12"><Loader2 size={20} className="animate-spin text-content-subtle" /></div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {members.map(member => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                isMe={member.user_id === user?.id}
-                isPM={isPM}
-                onRoleChange={updateRole}
-                onDisplayNameChange={updateDisplayName}
-                onRemove={removeMember}
+          <div className="overflow-auto flex-1">
+            <table className="w-full text-sm border-collapse">
+              <thead className="sticky top-0 bg-canvas z-10">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-content-muted w-36 border-b border-line">권한</th>
+                  {roles.map(r => (
+                    <th key={r} className="px-4 py-3 text-center border-b border-line min-w-[100px]">
+                      <span className={cn('text-[11px] font-bold px-2.5 py-1 rounded-full', ROLE_CFG[r].color)}>
+                        {ROLE_CFG[r].label}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PERMISSION_LABELS.map(({ key, label }, i) => (
+                  <tr key={key} className={i % 2 === 0 ? 'bg-canvas/50' : ''}>
+                    <td className="px-4 py-3 text-sm text-content font-medium border-b border-line/50">
+                      {label}
+                    </td>
+                    {roles.map(r => (
+                      <td key={r} className="px-4 py-3 text-center border-b border-line/50">
+                        <button
+                          onClick={() => toggle(r, key)}
+                          className={cn(
+                            'w-8 h-8 rounded-lg border-2 flex items-center justify-center mx-auto transition-all',
+                            permissions[r][key]
+                              ? 'border-primary bg-primary text-white'
+                              : 'border-line bg-canvas text-content-subtle hover:border-content-muted',
+                          )}
+                        >
+                          {permissions[r][key] && <Check size={14} />}
+                        </button>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* 푸터 */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-line bg-canvas shrink-0">
+          <p className="text-xs text-content-subtle">변경사항은 해당 역할의 모든 멤버에게 즉시 적용됩니다.</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={resetAll}>기본값으로 복원</Button>
+            <Button variant="secondary" onClick={onClose}>취소</Button>
+            <Button onClick={() => save(permissions).then(onClose)} disabled={saving}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 저장
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 멤버 카드 ──────────────────────────────────────────────────────────────────
+function MemberCard({
+  member, canEdit, isMe, parts, onUpdate, onRemove,
+}: {
+  member: ProjectMember; canEdit: boolean; isMe: boolean
+  parts: string[]
+  onUpdate: (patch: Parameters<ReturnType<typeof useMembers>['updateMember']>[1]) => Promise<void>
+  onRemove: () => void
+}) {
+  const [editName, setEditName]   = useState(false)
+  const [nameVal, setNameVal]     = useState(member.display_name ?? '')
+  const [showRole, setShowRole]   = useState(false)
+  const [showPart, setShowPart]   = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const roleRef = useRef<HTMLDivElement>(null)
+  const partRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (roleRef.current && !roleRef.current.contains(e.target as Node)) setShowRole(false)
+      if (partRef.current && !partRef.current.contains(e.target as Node)) setShowPart(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const save = async (patch: Parameters<typeof onUpdate>[0]) => {
+    setSaving(true); try { await onUpdate(patch) } finally { setSaving(false) }
+  }
+
+  const { label: roleLabel, color: roleColor } = ROLE_CFG[member.role]
+  const completionRate = member.taskCount ? Math.round((member.completedTaskCount ?? 0) / member.taskCount * 100) : 0
+
+  return (
+    <div className={cn(
+      'bg-surface border border-line rounded-2xl p-5 transition-all hover:shadow-card hover:border-primary/20',
+      isMe && 'ring-2 ring-primary/20',
+    )}>
+      {/* 상단: 아바타 + 이름 + 역할 */}
+      <div className="flex items-start gap-3 mb-4">
+        <Avatar name={member.display_name ?? member.email} size={44} />
+
+        <div className="flex-1 min-w-0">
+          {/* 이름 */}
+          {editName ? (
+            <div className="flex items-center gap-1.5 mb-1">
+              <input
+                autoFocus value={nameVal}
+                onChange={e => setNameVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { save({ display_name: nameVal }); setEditName(false) }
+                  if (e.key === 'Escape') setEditName(false)
+                }}
+                className="flex-1 px-2 py-1 text-sm border border-primary/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 bg-canvas"
               />
+              <button onClick={() => { save({ display_name: nameVal }); setEditName(false) }}
+                className="p-1 rounded bg-primary text-white"><Check size={12} /></button>
+              <button onClick={() => setEditName(false)} className="p-1 rounded text-content-subtle hover:bg-surface-hover"><X size={12} /></button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="font-semibold text-content text-sm truncate">
+                {member.display_name ?? member.email.split('@')[0]}
+              </span>
+              {isMe && <span className="text-[10px] px-1.5 py-0.5 bg-primary-soft text-primary rounded-full font-medium">나</span>}
+              {(canEdit || isMe) && (
+                <button onClick={() => setEditName(true)} className="opacity-0 group-hover:opacity-100 p-0.5 text-content-subtle hover:text-primary transition-all">
+                  <Pencil size={11} />
+                </button>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-content-subtle truncate">{member.email}</p>
+        </div>
+
+        {/* 역할 드롭다운 */}
+        <div ref={roleRef} className="relative shrink-0">
+          <button
+            onClick={() => canEdit && setShowRole(s => !s)}
+            disabled={!canEdit}
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors',
+              roleColor,
+              canEdit && 'hover:opacity-80 cursor-pointer',
+            )}
+          >
+            {roleLabel}
+            {canEdit && <ChevronDown size={10} />}
+          </button>
+          {showRole && (
+            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-surface border border-line rounded-xl shadow-popover overflow-hidden">
+              {ROLES.map(r => (
+                <button key={r} onClick={() => { save({ role: r }); setShowRole(false) }}
+                  className={cn(
+                    'w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-hover',
+                    member.role === r && 'bg-primary-soft text-primary font-semibold',
+                  )}>
+                  <span className={cn('inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold mr-1.5', ROLE_CFG[r].color)}>
+                    {ROLE_CFG[r].label}
+                  </span>
+                  {ROLE_CFG[r].desc}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 파트 선택 */}
+      <div ref={partRef} className="relative mb-4">
+        <button
+          onClick={() => canEdit && setShowPart(s => !s)}
+          className={cn(
+            'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors w-full text-left',
+            member.part
+              ? 'border-primary/30 bg-primary-soft text-primary'
+              : 'border-line text-content-subtle hover:border-content-muted',
+            canEdit && 'cursor-pointer',
+          )}
+        >
+          <span className="flex-1">{member.part ?? '파트 미지정'}</span>
+          {canEdit && <ChevronDown size={10} />}
+        </button>
+        {showPart && (
+          <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-surface border border-line rounded-xl shadow-popover overflow-hidden max-h-48 overflow-y-auto">
+            <button onClick={() => { save({ part: null }); setShowPart(false) }}
+              className="w-full text-left px-3 py-2 text-xs text-content-subtle hover:bg-surface-hover transition-colors italic">
+              파트 미지정
+            </button>
+            {parts.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-content-subtle italic">파트를 먼저 등록해주세요</p>
+            ) : parts.map(p => (
+              <button key={p} onClick={() => { save({ part: p }); setShowPart(false) }}
+                className={cn(
+                  'w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-hover',
+                  member.part === p && 'bg-primary-soft text-primary font-semibold',
+                )}>
+                {p}
+              </button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* 통계 */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {[
+          { icon: Bug, label: '이슈', val: member.issueCount ?? 0, color: 'text-orange-500' },
+          { icon: ClipboardList, label: '태스크', val: member.taskCount ?? 0, color: 'text-primary' },
+          { icon: Check, label: '완료율', val: `${completionRate}%`, color: 'text-success' },
+        ].map(({ icon: Icon, label, val, color }) => (
+          <div key={label} className="bg-canvas rounded-xl p-2.5 text-center">
+            <Icon size={14} className={cn('mx-auto mb-1', color)} />
+            <p className="text-xs font-bold text-content">{val}</p>
+            <p className="text-[10px] text-content-subtle">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 진행률 바 */}
+      {(member.taskCount ?? 0) > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between text-[10px] text-content-subtle mb-1">
+            <span>태스크 진행률</span>
+            <span>{member.completedTaskCount}/{member.taskCount}</span>
+          </div>
+          <div className="h-1.5 bg-surface-hover rounded-full overflow-hidden">
+            <div className="h-full bg-success rounded-full transition-all" style={{ width: `${completionRate}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* 액션 버튼 */}
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+        {saving && <Loader2 size={13} className="animate-spin text-content-subtle" />}
+        {(canEdit && !isMe) && (
+          <button onClick={onRemove}
+            className="p-1.5 rounded-lg text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors">
+            <Trash2 size={14} />
+          </button>
         )}
       </div>
     </div>
   )
 }
 
-function MemberRow({
-  member, isMe, isPM, onRoleChange, onDisplayNameChange, onRemove,
-}: {
-  member: ProjectMember
-  isMe: boolean
-  isPM: boolean
-  onRoleChange: (id: string, role: 'pm' | 'member') => Promise<void>
-  onDisplayNameChange: (id: string, name: string) => Promise<void>
-  onRemove: (id: string) => Promise<void>
-}) {
-  const [changing, setChanging]       = useState(false)
-  const [removing, setRemoving]       = useState(false)
-  const [rowError, setRowError]       = useState<string | null>(null)
+// ── 메인 페이지 ────────────────────────────────────────────────────────────────
+export default function MemberManage() {
+  const { id: projectId } = useParams<{ id: string }>()
+  const { user }    = useAuth()
+  const { project } = useProject(projectId!)
+  const { members, loading, error, findUserByEmail, searchProfiles, addMember, updateMember, removeMember } = useMembers(projectId!)
 
-  // 이름 인라인 편집
-  const [editingName, setEditingName] = useState(false)
-  const [nameInput, setNameInput]     = useState(member.display_name ?? '')
-  const [savingName, setSavingName]   = useState(false)
-  const nameInputRef                  = useRef<HTMLInputElement>(null)
+  const myMember  = members.find(m => m.user_id === user?.id)
+  const isPM      = myMember?.role === 'pm' || project?.createdBy === user?.id
+  const { parts, addPart, removePart } = useProjectParts(projectId!)
+
+  // 추가 폼
+  const [email, setEmail]         = useState('')
+  const [role, setRole]           = useState<MemberRole>('developer')
+  const [part, setPart]           = useState('')
+  const [name, setName]           = useState('')
+  const [adding, setAdding]       = useState(false)
+  const [addErr, setAddErr]       = useState<string | null>(null)
+  const [addOk, setAddOk]         = useState(false)
+  const [showForm, setShowForm]   = useState(false)
+
+  // 이메일 자동완성
+  const [suggestions, setSuggestions] = useState<{ id: string; email: string; display_name: string | null }[]>([])
+  const [showSuggest, setShowSuggest] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef     = useRef<HTMLDivElement>(null)
+
+  // 역할별 권한 모달
+  const [showPermModal, setShowPermModal] = useState(false)
+
+  // 검색
+  const [search, setSearch] = useState('')
+  const filtered = members.filter(m =>
+    !search || (m.display_name ?? m.email).toLowerCase().includes(search.toLowerCase()) ||
+    m.role.includes(search.toLowerCase()) || (m.part ?? '').includes(search)
+  )
 
   useEffect(() => {
-    if (editingName) nameInputRef.current?.focus()
-  }, [editingName])
+    const h = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setShowSuggest(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
 
-  async function handleRoleChange(newRole: 'pm' | 'member') {
-    setChanging(true)
-    setRowError(null)
-    try { await onRoleChange(member.id, newRole) }
-    catch (err) { setRowError((err as Error).message) }
-    finally { setChanging(false) }
-  }
-
-  async function handleSaveName() {
-    if (nameInput.trim() === (member.display_name ?? '')) { setEditingName(false); return }
-    setSavingName(true)
-    setRowError(null)
-    try {
-      await onDisplayNameChange(member.id, nameInput)
-      setEditingName(false)
-    } catch (err) {
-      setRowError((err as Error).message)
-    } finally {
-      setSavingName(false)
+  const onEmailChange = (v: string) => {
+    setEmail(v); setSuggestions([]); setShowSuggest(false)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (v.length >= 2) {
+      debounceRef.current = setTimeout(async () => {
+        const r = await searchProfiles(v)
+        setSuggestions(r); setShowSuggest(r.length > 0)
+      }, 300)
     }
   }
-
-  async function handleRemove() {
-    const msg = isMe
-      ? '프로젝트에서 나가시겠습니까? 다시 초대받아야 참여할 수 있습니다.'
-      : `${member.display_name ?? member.email} 님을 멤버에서 제거할까요?`
-    if (!confirm(msg)) return
-    setRemoving(true)
-    setRowError(null)
-    try { await onRemove(member.id) }
-    catch (err) { setRowError((err as Error).message) }
-    finally { setRemoving(false) }
+  const selectSuggestion = (p: { email: string; display_name: string | null }) => {
+    setEmail(p.email); setName(p.display_name ?? ''); setShowSuggest(false)
   }
 
-  const canEditName = isMe || isPM  // 본인 또는 PM은 이름 수정 가능
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault(); setAddErr(null)
+    if (!email.trim() || !name.trim()) return
+    setAdding(true)
+    try {
+      const found = await findUserByEmail(email)
+      if (!found) { setAddErr('해당 이메일로 가입된 계정이 없습니다.'); return }
+      await addMember(found.id, found.email, role, name, part || undefined, {
+        projectName: project?.name ?? '프로젝트',
+        inviterName: user?.email?.split('@')[0] ?? '팀원',
+      })
+      setEmail(''); setName(''); setPart(''); setRole('developer'); setAddOk(true); setShowForm(false)
+      setTimeout(() => setAddOk(false), 3000)
+    } catch (err) { setAddErr((err as Error).message) }
+    finally { setAdding(false) }
+  }
+
+  const inputCls = 'w-full px-3 py-2 border border-line rounded-lg text-sm bg-canvas focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition'
 
   return (
-    <div className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
-      <div className="flex items-center gap-4">
-        {/* 아바타 */}
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {(member.display_name ?? member.email)[0].toUpperCase()}
-        </div>
-
-        {/* 이름 + 이메일 */}
-        <div className="flex-1 min-w-0">
-          {editingName ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                ref={nameInputRef}
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleSaveName()
-                  if (e.key === 'Escape') { setEditingName(false); setNameInput(member.display_name ?? '') }
-                }}
-                placeholder="표시 이름"
-                className="text-sm border border-blue-400 rounded px-2 py-0.5 w-36 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                onClick={handleSaveName}
-                disabled={savingName}
-                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                title="저장"
-              >
-                {savingName ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              </button>
-              <button
-                onClick={() => { setEditingName(false); setNameInput(member.display_name ?? '') }}
-                className="p-1 text-gray-400 hover:bg-gray-100 rounded"
-                title="취소"
-              >
-                <X size={13} />
-              </button>
+    <div className="p-8 max-w-5xl">
+      <PageHeader
+        title="멤버 관리"
+        description={`${members.length}명이 이 프로젝트에 참여 중입니다.`}
+        actions={
+          isPM && (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowPermModal(true)}>
+                <Shield size={16} /> 역할 권한 설정
+              </Button>
+              <Button onClick={() => setShowForm(s => !s)}>
+                <UserPlus size={16} /> 멤버 초대
+              </Button>
             </div>
-          ) : (
-            <div className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
-              {member.display_name ?? <span className="text-gray-400 italic">이름 없음</span>}
-              {isMe && <span className="text-xs text-gray-400">(나)</span>}
-              {canEditName && (
-                <button
-                  onClick={() => { setEditingName(true); setNameInput(member.display_name ?? '') }}
-                  className="p-0.5 text-gray-300 hover:text-blue-500 rounded transition-colors"
-                  title="이름 수정"
-                >
-                  <Pencil size={12} />
-                </button>
-              )}
-            </div>
-          )}
-          <div className="text-xs text-gray-400 truncate">{member.email}</div>
+          )
+        }
+      />
+
+      {/* 파트 관리 */}
+      {isPM && <PartManager parts={parts} onAdd={addPart} onRemove={removePart} />}
+
+      {/* 성공 배너 */}
+      {addOk && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-success-soft border border-success/20 rounded-xl text-sm text-success">
+          <Check size={14} /> 멤버가 추가됐습니다.
         </div>
+      )}
 
-        {/* 역할 */}
-        {isPM && !isMe ? (
-          <select
-            value={member.role}
-            onChange={e => handleRoleChange(e.target.value as 'pm' | 'member')}
-            disabled={changing}
-            className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="pm">PM</option>
-            <option value="member">멤버</option>
-          </select>
-        ) : (
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ROLE_COLOR[member.role]}`}>
-            {member.role === 'pm' && <Crown size={10} className="inline mr-1" />}
-            {ROLE_LABEL[member.role]}
-          </span>
-        )}
+      {/* 초대 폼 */}
+      {showForm && isPM && (
+        <div className="mb-6 bg-surface border border-line rounded-2xl p-5 animate-fade-in">
+          <h3 className="text-sm font-semibold text-content mb-4 flex items-center gap-2">
+            <UserPlus size={15} className="text-primary" /> 새 멤버 초대
+          </h3>
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {/* 이메일 */}
+              <div ref={wrapRef} className="relative col-span-2 sm:col-span-1">
+                <label className="block text-xs font-medium text-content-muted mb-1">이메일 *</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
+                  <input type="email" value={email} onChange={e => onEmailChange(e.target.value)}
+                    placeholder="user@example.com" required className={inputCls + ' pl-8'} />
+                  {email && <button type="button" onClick={() => { setEmail(''); setSuggestions([]) }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-subtle hover:text-content">
+                    <X size={14} />
+                  </button>}
+                </div>
+                {showSuggest && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-popover overflow-hidden">
+                    {suggestions.map(p => (
+                      <button key={p.id} type="button" onMouseDown={() => selectSuggestion(p)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-surface-hover transition-colors border-b border-line last:border-0">
+                        <div className="text-sm font-medium text-content">{p.display_name ?? p.email.split('@')[0]}</div>
+                        <div className="text-xs text-content-subtle">{p.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-        {/* 삭제: PM은 타인 제거, 본인은 언제나 나가기 가능 */}
-        {(isPM && !isMe) || isMe ? (
-          <button
-            onClick={handleRemove}
-            disabled={removing}
-            className={`flex items-center gap-1 rounded-lg transition-colors disabled:opacity-50 ${
-              isMe
-                ? 'px-2.5 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200 hover:border-red-200'
-                : 'p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50'
-            }`}
-            title={isMe ? '프로젝트에서 나가기' : '멤버 제거'}
-          >
-            {removing
-              ? <Loader2 size={15} className="animate-spin" />
-              : isMe
-                ? <><Trash2 size={13} />나가기</>
-                : <Trash2 size={15} />
-            }
-          </button>
-        ) : null}
+              {/* 이름 */}
+              <div>
+                <label className="block text-xs font-medium text-content-muted mb-1">표시 이름 *</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="예: 홍길동" required className={inputCls} />
+              </div>
+
+              {/* 역할 */}
+              <div>
+                <label className="block text-xs font-medium text-content-muted mb-1">역할 *</label>
+                <select value={role} onChange={e => setRole(e.target.value as MemberRole)} className={inputCls}>
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_CFG[r].label} — {ROLE_CFG[r].desc}</option>)}
+                </select>
+              </div>
+
+              {/* 파트 */}
+              <div>
+                <label className="block text-xs font-medium text-content-muted mb-1">개발 파트</label>
+                <select value={part} onChange={e => setPart(e.target.value)} className={inputCls}>
+                  <option value="">파트 선택 (선택)</option>
+                  {parts.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                {parts.length === 0 && (
+                  <p className="text-xs text-content-subtle mt-1">↑ 상단 파트 관리에서 먼저 파트를 등록하세요</p>
+                )}
+              </div>
+            </div>
+
+            {addErr && (
+              <p className="flex items-center gap-1.5 text-xs text-danger bg-danger-soft px-3 py-2 rounded-lg">
+                <AlertCircle size={13} /> {addErr}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>취소</Button>
+              <Button type="submit" disabled={adding || !email.trim() || !name.trim()}>
+                {adding ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+                초대
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 검색 */}
+      <div className="relative mb-6">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="이름, 역할, 파트로 검색..."
+          className="w-full pl-9 pr-4 py-2 text-sm border border-line rounded-xl bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
       </div>
 
-      {rowError && (
-        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-          <AlertCircle size={11} /> {rowError}
-        </p>
+      {/* 역할별 섹션 */}
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 size={24} className="animate-spin text-content-subtle" /></div>
+      ) : error ? (
+        <p className="text-danger text-sm">{error}</p>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-content-subtle text-sm">멤버가 없습니다.</div>
+      ) : (
+        <div className="space-y-8">
+          {ROLES.filter(r => filtered.some(m => m.role === r)).map(r => {
+            const roleMembers = filtered.filter(m => m.role === r)
+            const { label, color } = ROLE_CFG[r]
+            return (
+              <section key={r}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full', color)}>{label}</span>
+                  <span className="text-xs text-content-subtle">{roleMembers.length}명</span>
+                  <div className="flex-1 h-px bg-line" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {roleMembers.map(m => (
+                    <div key={m.id} className="group">
+                      <MemberCard
+                        member={m}
+                        canEdit={isPM}
+                        isMe={m.user_id === user?.id}
+                        parts={parts}
+                        onUpdate={patch => updateMember(m.id, patch)}
+                        onRemove={() => { if (confirm(`${m.display_name ?? m.email}를 제거할까요?`)) removeMember(m.id) }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 역할별 권한 매트릭스 모달 */}
+      {showPermModal && (
+        <RolePermissionModal projectId={projectId!} onClose={() => setShowPermModal(false)} />
       )}
     </div>
   )

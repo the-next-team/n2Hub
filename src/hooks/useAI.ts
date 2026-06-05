@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { generateDocumentDraft } from '../lib/anthropic'
+import { generateDocumentDraft } from '../lib/groq'
 
 export function useAI() {
   const [isGenerating, setIsGenerating] = useState(false)

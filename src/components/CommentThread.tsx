@@ -43,7 +43,7 @@ function avatarColor(name: string): string {
 
 interface Props {
   projectId: string
-  targetType: 'task' | 'file'
+  targetType: 'task' | 'file' | 'issue'
   targetId: string | null
   /** 패널 제목 (기본: "댓글") */
   title?: string

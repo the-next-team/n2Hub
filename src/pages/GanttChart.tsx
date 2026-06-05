@@ -31,7 +31,7 @@ const SC: Record<string, { bar: string; plan: string; dot: string; label: string
 }
 const MS_COLOR: Record<Milestone['status'], { fill: string; stroke: string; text: string }> = {
   planned: { fill: '#eef2ff', stroke: '#4f46e5', text: '#4f46e5' },
-  done:    { fill: '#f0fdf4', stroke: '#16a34a', text: '#16a34a' },
+  done:    { fill: 'var(--color-success-soft)', stroke: '#16a34a', text: '#16a34a' },
   missed:  { fill: '#fff1f2', stroke: '#dc2626', text: '#dc2626' },
 }
 const MS_STATUS_LABEL: Record<Milestone['status'], string> = {
@@ -125,7 +125,7 @@ function GanttBar({ task, vsDate, cellW: cw }: { task: Task; vsDate: Date; cellW
       {w > 40 && (
         <text x={x + w / 2} y={BAR_Y + BAR_H / 2 + 1}
           textAnchor="middle" dominantBaseline="middle"
-          fontSize="9" fill={actualW > w / 2 ? '#ffffff' : color.bar} fontWeight="600">
+          fontSize="9" fill={actualW > w / 2 ? 'var(--color-surface)' : color.bar} fontWeight="600">
           {task.actual_progress}%
         </text>
       )}
@@ -413,9 +413,9 @@ export default function GanttChart() {
                 <th rowSpan={2} style={{
                   position: 'sticky', left: 0, top: 0, zIndex: 30,
                   width: LEFT_W, height: headH,
-                  background: '#f8fafc',
-                  borderBottom: '1px solid #e4e4e7',
-                  borderRight: '2px solid #e4e4e7',
+                  background: 'var(--color-canvas)',
+                  borderBottom: '1px solid var(--color-line)',
+                  borderRight: '2px solid var(--color-line)',
                   padding: '0 12px', textAlign: 'left', verticalAlign: 'middle',
                 }}>
                   <div className="flex items-center gap-2 text-xs font-semibold text-content-muted">
@@ -427,17 +427,17 @@ export default function GanttChart() {
                 <th style={{
                   position: 'sticky', top: 0, zIndex: 20,
                   height: HEAD_H1, padding: 0,
-                  background: '#f8fafc',
-                  borderBottom: '1px solid #e4e4e7',
+                  background: 'var(--color-canvas)',
+                  borderBottom: '1px solid var(--color-line)',
                 }}>
                   <div style={{ position: 'relative', width: totalW, height: HEAD_H1 }}>
                     {months.map((seg, i) => (
                       <div key={i} style={{
                         position: 'absolute', left: seg.offset * cw, top: 0,
                         width: seg.w, height: HEAD_H1,
-                        borderRight: '1px solid #e4e4e7',
+                        borderRight: '1px solid var(--color-line)',
                         display: 'flex', alignItems: 'center', paddingLeft: 8,
-                        fontSize: 11, fontWeight: 600, color: '#52525b',
+                        fontSize: 11, fontWeight: 600, color: 'var(--color-content-muted)',
                         overflow: 'hidden', whiteSpace: 'nowrap',
                       }}>
                         {seg.w > 50 ? seg.label : ''}
@@ -451,17 +451,17 @@ export default function GanttChart() {
                 <th style={{
                   position: 'sticky', top: HEAD_H1, zIndex: 20,
                   height: HEAD_H2, padding: 0,
-                  background: '#f8fafc',
-                  borderBottom: '2px solid #e4e4e7',
+                  background: 'var(--color-canvas)',
+                  borderBottom: '2px solid var(--color-line)',
                 }}>
                   <div style={{ position: 'relative', width: totalW, height: HEAD_H2 }}>
                     {weekXs.map((x, i) => (
                       <div key={i} style={{
                         position: 'absolute', left: x, top: 0, height: HEAD_H2,
-                        borderLeft: '1px solid #e4e4e7',
+                        borderLeft: '1px solid var(--color-line)',
                         paddingLeft: 3,
                         display: 'flex', alignItems: 'center',
-                        fontSize: 9.5, color: '#a1a1aa',
+                        fontSize: 9.5, color: 'var(--color-content-subtle)',
                       }}>
                         {addDays(viewStart, Math.round(x / cw)).getDate()}
                       </div>
@@ -484,7 +484,7 @@ export default function GanttChart() {
                 const ls = levelStyle(task.wbs_level)
                 const color = SC[task.status] ?? SC.not_started
                 const isOdd = rowIdx % 2 === 1
-                const rowBg = task.wbs_level === 1 ? '#f8fafc' : isOdd ? '#fafafa' : '#ffffff'
+                const rowBg = task.wbs_level === 1 ? 'var(--color-canvas)' : isOdd ? 'var(--color-canvas)' : 'var(--color-surface)'
 
                 return (
                   <tr key={task.id}>
@@ -493,13 +493,13 @@ export default function GanttChart() {
                       position: 'sticky', left: 0, zIndex: 10,
                       width: LEFT_W, height: ROW_H,
                       background: rowBg,
-                      borderBottom: '1px solid #f4f4f5',
-                      borderRight: '2px solid #e4e4e7',
+                      borderBottom: '1px solid var(--color-line)',
+                      borderRight: '2px solid var(--color-line)',
                       padding: `0 8px 0 ${ls.indent + 8}px`,
                       verticalAlign: 'middle',
                     }}>
                       <div className="flex items-center gap-2 min-w-0">
-                        <span style={{ fontSize: 10, color: '#a1a1aa', fontFamily: 'monospace', flexShrink: 0, minWidth: 44 }}>
+                        <span style={{ fontSize: 10, color: 'var(--color-content-subtle)', fontFamily: 'monospace', flexShrink: 0, minWidth: 44 }}>
                           {task.wbs_code}
                         </span>
                         <span style={{
@@ -513,15 +513,15 @@ export default function GanttChart() {
                       </div>
                       {task.wbs_level === 3 && (task.assignee_name || task.actual_progress > 0) && (
                         <div className="flex items-center gap-1.5 mt-0.5" style={{ paddingLeft: 44 }}>
-                          {task.assignee_name && <span style={{ fontSize: 9.5, color: '#a1a1aa' }}>{task.assignee_name}</span>}
+                          {task.assignee_name && <span style={{ fontSize: 9.5, color: 'var(--color-content-subtle)' }}>{task.assignee_name}</span>}
                           {task.actual_progress > 0 && <span style={{ fontSize: 9.5, color: color.dot, fontWeight: 600 }}>{task.actual_progress}%</span>}
                         </div>
                       )}
                     </td>
                     {/* 간트 셀 */}
-                    <td style={{ height: ROW_H, padding: 0, position: 'relative', background: rowBg, borderBottom: '1px solid #f4f4f5' }}>
+                    <td style={{ height: ROW_H, padding: 0, position: 'relative', background: rowBg, borderBottom: '1px solid var(--color-line)' }}>
                       <svg width={totalW} height={ROW_H} style={{ display: 'block', overflow: 'visible' }}>
-                        {weekXs.map((x, i) => <line key={i} x1={x} y1={0} x2={x} y2={ROW_H} stroke="#e4e4e7" strokeWidth="1" />)}
+                        {weekXs.map((x, i) => <line key={i} x1={x} y1={0} x2={x} y2={ROW_H} stroke="var(--color-line)" strokeWidth="1" />)}
                         {todayX >= 0 && todayX <= totalW && (
                           <line x1={todayX} y1={0} x2={todayX} y2={ROW_H} stroke="#ef4444" strokeWidth="1.5" opacity="0.5" />
                         )}
@@ -539,23 +539,23 @@ export default function GanttChart() {
                   <td style={{
                     position: 'sticky', left: 0, zIndex: 10,
                     width: LEFT_W, height: MS_ROW_H,
-                    background: '#f0fdf4',
-                    borderTop: '2px solid #e4e4e7',
-                    borderRight: '2px solid #e4e4e7',
+                    background: 'var(--color-success-soft)',
+                    borderTop: '2px solid var(--color-line)',
+                    borderRight: '2px solid var(--color-line)',
                     padding: '0 12px',
                     verticalAlign: 'middle',
                   }}>
                     <div className="flex items-center gap-2">
                       <Flag size={11} className="text-primary shrink-0" />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#3f3f46' }}>마일스톤</span>
-                      <span style={{ fontSize: 10, color: '#a1a1aa' }}>{milestones.length}개</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-content)' }}>마일스톤</span>
+                      <span style={{ fontSize: 10, color: 'var(--color-content-subtle)' }}>{milestones.length}개</span>
                     </div>
                   </td>
                   {/* 오른쪽: 다이아몬드 마커들 */}
-                  <td style={{ height: MS_ROW_H, padding: 0, background: '#f0fdf4', borderTop: '2px solid #e4e4e7' }}>
+                  <td style={{ height: MS_ROW_H, padding: 0, background: 'var(--color-success-soft)', borderTop: '2px solid var(--color-line)' }}>
                     <svg width={totalW} height={MS_ROW_H} style={{ display: 'block', overflow: 'visible' }}>
                       {/* 주 구분선 */}
-                      {weekXs.map((x, i) => <line key={i} x1={x} y1={0} x2={x} y2={MS_ROW_H} stroke="#d1fae5" strokeWidth="1" />)}
+                      {weekXs.map((x, i) => <line key={i} x1={x} y1={0} x2={x} y2={MS_ROW_H} stroke="var(--color-line)" strokeWidth="1" />)}
                       {/* 오늘 */}
                       {todayX >= 0 && todayX <= totalW && (
                         <line x1={todayX} y1={0} x2={todayX} y2={MS_ROW_H} stroke="#ef4444" strokeWidth="1.5" opacity="0.4" />

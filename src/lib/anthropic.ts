@@ -1,13 +1,20 @@
+const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined
+
+function assertApiKey() {
+  if (!API_KEY) throw new Error('Anthropic API 키가 설정되지 않았습니다. .env.local에 VITE_ANTHROPIC_API_KEY를 추가해주세요.')
+}
+
 export async function generateDocumentDraft(
   documentType: string,
   projectContext: string,
   onChunk: (text: string) => void
 ): Promise<void> {
+  assertApiKey()
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY as string,
+      'x-api-key': API_KEY!,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
@@ -24,6 +31,11 @@ Markdown 형식으로 작성하되 제목, 소제목, 표, 목록을 적절히 �
       }],
     }),
   })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error((err as { error?: { message?: string } }).error?.message ?? `API 오류 (${response.status})`)
+  }
 
   const reader = response.body!.getReader()
   const decoder = new TextDecoder()
@@ -46,15 +58,48 @@ Markdown 형식으로 작성하되 제목, 소제목, 표, 목록을 적절히 �
   }
 }
 
-export async function summarizeChanges(
-  prevContent: string,
-  newContent: string
+/** OnlyOffice 파일 텍스트 추출 후 AI 요약 */
+export async function summarizeDocument(
+  content: string,
+  fileName: string,
 ): Promise<string> {
+  assertApiKey()
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY as string,
+      'x-api-key': API_KEY!,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `다음 문서("${fileName}")의 내용을 분석해주세요.\n\n` +
+          `주요 섹션, 핵심 내용, 중요 항목을 포함하여 5~10줄로 요약해주세요.\n\n` +
+          `[문서 내용]\n${content}`,
+      }],
+    }),
+  })
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.error?.message ?? `API 오류 (${response.status})`)
+  const text = data.content?.[0]?.text
+  if (!text) throw new Error('응답에서 텍스트를 추출할 수 없습니다.')
+  return text
+}
+
+export async function summarizeChanges(
+  prevContent: string,
+  newContent: string
+): Promise<string> {
+  assertApiKey()
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY!,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
@@ -68,5 +113,10 @@ export async function summarizeChanges(
     }),
   })
   const data = await response.json()
-  return data.content[0].text
+  if (!response.ok) {
+    throw new Error(data.error?.message ?? `API 오류 (${response.status})`)
+  }
+  const text = data.content?.[0]?.text
+  if (!text) throw new Error('응답에서 텍스트를 추출할 수 없습니다.')
+  return text
 }

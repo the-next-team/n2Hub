@@ -158,6 +158,33 @@
   }
 }
 
+/* ── 공통 입력 필드 ────────────────────────────────────────────────────────── */
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface
+           focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary
+           transition-colors placeholder:text-content-subtle;
+  }
+}
+
+/* ── 페이드인 애니메이션 ─────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+.animate-fade-in        { animation: fade-in 0.18s ease-out both; }
+.animate-fade-in-scale  { animation: fade-in-scale 0.15s ease-out both; }
+.animate-slide-in-right { animation: slide-in-right 0.18s ease-out both; }
+
 /* TipTap editor styles */
 .tiptap {
   outline: none;
@@ -178,6 +205,15 @@
 .tiptap pre { background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin: 0.75rem 0; overflow-x: auto; }
 .tiptap pre code { background: transparent; padding: 0; color: inherit; }
 .tiptap hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.25rem 0; }
+
+/* ── docx-preview 렌더링 스타일 ──────────────────────────────────────────── */
+/* docx-preview가 자체적으로 .docx-wrapper / section.docx 를 생성하므로
+   페이지 크기·여백은 건드리지 않고 그림자·배경만 최소 보정 */
+.docx-wrapper > section.docx {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+}
+
+/* TipTap placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -186,14 +222,64 @@
   height: 0;
 }
 
+/* TipTap table */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  table-layout: fixed;
+}
+.tiptap table td,
+.tiptap table th {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.75rem;
+  min-width: 60px;
+  vertical-align: top;
+  position: relative;
+  word-break: break-word;
+}
+.tiptap table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+}
+.tiptap table .selectedCell::after {
+  background: rgba(99, 102, 241, 0.12);
+  content: '';
+  left: 0; right: 0; top: 0; bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+.tiptap table .column-resize-handle {
+  background-color: #6366f1;
+  bottom: -2px;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 4px;
+}
+.tiptap .tableWrapper {
+  overflow-x: auto;
+}
+
+/* TipTap underline */
+.tiptap u { text-decoration: underline; }
+
 /* ── 인쇄(PDF) 스타일 ────────────────────────────────────── */
 @media print {
-  /* 레이아웃 사이드바, 탐색바 숨기기 */
-  nav,
-  aside,
+  /* 사이드바, 툴바, 헤더, 상태바 숨기기 */
+  nav, aside, header,
   [data-sidebar],
   .no-print {
     display: none !important;
+  }
+
+  /* 페이지 여백 */
+  @page {
+    margin: 2cm 2.5cm;
+    size: A4;
   }
 
   /* 표지 페이지: 전체 높이, 다음 페이지로 강제 브레이크 */
@@ -206,12 +292,7 @@
     padding: 5rem 4rem;
     background: white;
     break-after: page;
-    page-break-after: always; /* 레거시 브라우저 호환 */
-  }
-
-  /* 페이지 여백 */
-  @page {
-    margin: 1.5cm 2cm;
+    page-break-after: always;
   }
 
   /* 표지는 여백 없이 */
@@ -219,8 +300,48 @@
     margin: 0;
   }
 
-  /* 링크 밑줄 제거 */
-  a {
-    text-decoration: none !important;
+  /* 문서 편집 영역 */
+  .tiptap {
+    max-width: 100% !important;
+    padding: 0 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.8 !important;
   }
+
+  /* 제목 스타일 */
+  .tiptap h1 { font-size: 18pt !important; margin: 16pt 0 8pt !important; page-break-after: avoid; }
+  .tiptap h2 { font-size: 14pt !important; margin: 12pt 0 6pt !important; page-break-after: avoid; }
+  .tiptap h3 { font-size: 12pt !important; margin: 10pt 0 4pt !important; page-break-after: avoid; }
+
+  /* 단락 */
+  .tiptap p { margin: 4pt 0 !important; orphans: 3; widows: 3; }
+
+  /* 표 */
+  .tiptap table { width: 100% !important; border-collapse: collapse !important; font-size: 9.5pt !important; }
+  .tiptap table td,
+  .tiptap table th { padding: 4pt 6pt !important; border: 0.5pt solid #555 !important; }
+  .tiptap table th { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* 페이지 경계에서 표/블록 분리 방지 */
+  .tiptap table, .tiptap pre, .tiptap blockquote { page-break-inside: avoid; }
+
+  /* 코드 블록 */
+  .tiptap pre {
+    background: #f5f5f5 !important;
+    color: #1f2937 !important;
+    border: 0.5pt solid #ddd !important;
+    font-size: 9pt !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 링크 밑줄 유지, URL 표시 제거 */
+  a { text-decoration: underline !important; color: inherit !important; }
+  a[href]::after { content: none !important; }
+
+  /* 배경색/그림자 제거 */
+  .bg-white, .shadow-card, .rounded-xl { box-shadow: none !important; border-radius: 0 !important; }
+
+  /* 에디터 래퍼 border 제거 */
+  .bg-white.rounded-xl.border { border: none !important; padding: 0 !important; }
 }

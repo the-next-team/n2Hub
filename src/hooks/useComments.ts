@@ -15,7 +15,7 @@ export interface Comment {
 
 export function useComments(
   projectId: string,
-  targetType: 'task' | 'file',
+  targetType: 'task' | 'file' | 'issue',
   targetId: string | null,
 ) {
   const { user } = useAuth()
@@ -109,7 +109,7 @@ export function useComments(
 // 댓글 수만 가져오는 경량 훅 (목록에서 배지 표시용)
 export function useCommentCounts(
   projectId: string,
-  targetType: 'task' | 'file',
+  targetType: 'task' | 'file' | 'issue',
   targetIds: string[],
 ): Map<string, number> {
   const [counts, setCounts] = useState<Map<string, number>>(new Map())

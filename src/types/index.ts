@@ -20,6 +20,11 @@ export interface Project {
   status: 'active' | 'archived'
   createdBy: string
   createdAt: string
+  // 브랜딩
+  systemCode:  string | null   // 'FNDB'
+  systemName:  string | null   // 'FINDA BANK'
+  logoUrl:     string | null   // 회사 로고 URL
+  themeColor:  string | null   // '#4f46e5'
 }
 
 export interface Document {

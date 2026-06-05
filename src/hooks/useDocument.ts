@@ -81,7 +81,15 @@ export function useDocuments(projectId: string) {
     return doc
   }
 
-  return { documents, loading, error, createDocument }
+  async function deleteDocument(docId: string): Promise<void> {
+    // 버전 삭제 후 문서 삭제
+    await supabase.from('document_versions').delete().eq('document_id', docId)
+    const { error } = await supabase.from('documents').delete().eq('id', docId)
+    if (error) throw error
+    setDocuments(prev => prev.filter(d => d.id !== docId))
+  }
+
+  return { documents, loading, error, createDocument, deleteDocument }
 }
 
 export function useDocument(docId: string) {

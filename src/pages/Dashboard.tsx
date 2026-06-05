@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom'
 import {
-  FolderKanban, FileText, CheckCircle, Clock,
+  FolderKanban, CheckCircle, Clock,
   ChevronRight, AlertCircle, ClipboardList, Loader2,
+  Bug, Diamond,
 } from 'lucide-react'
+import {
+  PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+} from 'recharts'
 import { useProjects } from '../hooks/useProject'
 import { useMyTasks } from '../hooks/useMyTasks'
+import { useDashboardStats } from '../hooks/useDashboardStats'
 import { formatDate } from '../utils'
 import { Card, PageHeader, SectionTitle } from '../components/ui'
 
@@ -17,9 +23,9 @@ const STATUS_LABEL = {
 
 const STATUS_COLOR = {
   not_started: 'bg-gray-100 text-gray-600',
-  in_progress:  'bg-blue-100 text-blue-700',
-  completed:    'bg-green-100 text-green-700',
-  delayed:      'bg-red-100 text-red-700',
+  in_progress:  'bg-primary-soft text-blue-700',
+  completed:    'bg-success-soft text-green-700',
+  delayed:      'bg-danger-soft text-red-700',
 } as const
 
 function daysLeft(endDate: string | null): { label: string; urgent: boolean } {
@@ -34,36 +40,38 @@ function daysLeft(endDate: string | null): { label: string; urgent: boolean } {
 export default function Dashboard() {
   const { projects, loading: projLoading } = useProjects()
   const { tasks: myTasks, loading: myLoading, overdue, dueSoon } = useMyTasks()
+  const { openIssues, criticalIssues, upcomingMilestones, overdueMilestones, loading: statsLoading } = useDashboardStats()
 
-  const activeCount   = projects.filter(p => p.status === 'active').length
-  const archivedCount = projects.filter(p => p.status === 'archived').length
+  const activeCount = projects.filter(p => p.status === 'active').length
 
   const stats = [
     {
       label: '전체 프로젝트',
       value: projLoading ? '-' : String(projects.length),
+      sub: `진행중 ${activeCount}개`,
       icon: FolderKanban,
       color: 'text-primary bg-primary-soft',
     },
     {
-      label: '진행중 프로젝트',
-      value: projLoading ? '-' : String(activeCount),
-      icon: Clock,
-      color: 'text-orange-600 bg-orange-50',
-    },
-    {
       label: '내 미완료 작업',
       value: myLoading ? '-' : String(myTasks.length),
+      sub: overdue.length > 0 ? `초과 ${overdue.length}개` : `임박 ${dueSoon.length}개`,
       icon: ClipboardList,
-      color: 'text-blue-600 bg-blue-50',
+      color: overdue.length > 0 ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50',
     },
     {
-      label: '마감 7일 이내',
-      value: myLoading ? '-' : String(dueSoon.length + overdue.length),
-      icon: AlertCircle,
-      color: dueSoon.length + overdue.length > 0
-        ? 'text-red-600 bg-red-50'
-        : 'text-green-600 bg-green-50',
+      label: '열린 이슈',
+      value: statsLoading ? '-' : String(openIssues),
+      sub: criticalIssues > 0 ? `긴급 ${criticalIssues}개` : '긴급 없음',
+      icon: Bug,
+      color: criticalIssues > 0 ? 'text-red-600 bg-red-50' : 'text-orange-600 bg-orange-50',
+    },
+    {
+      label: '다가오는 마일스톤',
+      value: statsLoading ? '-' : String(upcomingMilestones.length),
+      sub: overdueMilestones > 0 ? `기한 초과 ${overdueMilestones}개` : '7일 이내',
+      icon: Diamond,
+      color: overdueMilestones > 0 ? 'text-red-600 bg-red-50' : 'text-primary bg-primary-soft',
     },
   ]
 
@@ -76,13 +84,14 @@ export default function Dashboard() {
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, color }) => (
+        {stats.map(({ label, value, sub, icon: Icon, color }) => (
           <Card key={label} className="p-5">
             <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
               <Icon size={20} />
             </div>
             <div className="text-2xl font-bold text-content">{value}</div>
-            <div className="text-sm text-content-muted mt-1">{label}</div>
+            <div className="text-sm text-content-muted mt-0.5">{label}</div>
+            {sub && <div className="text-xs text-content-subtle mt-1">{sub}</div>}
           </Card>
         ))}
       </div>
@@ -162,6 +171,36 @@ export default function Dashboard() {
         )}
       </Card>
 
+      {/* 다가오는 마일스톤 */}
+      {!statsLoading && upcomingMilestones.length > 0 && (
+        <Card>
+          <div className="flex items-center gap-2 px-6 py-4 border-b border-line">
+            <Diamond size={15} className="text-indigo-500" />
+            <SectionTitle>다가오는 마일스톤 (7일 이내)</SectionTitle>
+          </div>
+          <div className="divide-y divide-line">
+            {upcomingMilestones.map(ms => {
+              const days = Math.ceil((new Date(ms.due_date).getTime() - Date.now()) / 86_400_000)
+              return (
+                <Link
+                  key={ms.id}
+                  to={`/projects/${ms.project_id}/gantt`}
+                  className="flex items-center justify-between px-6 py-3 hover:bg-surface-hover transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                    <span className="text-sm text-content">{ms.name}</span>
+                  </div>
+                  <span className={`text-xs font-medium ${days <= 1 ? 'text-red-600' : days <= 3 ? 'text-orange-500' : 'text-content-subtle'}`}>
+                    {days === 0 ? '오늘' : `D-${days}`}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* 최근 프로젝트 */}
       <Card>
         <div className="flex items-center justify-between px-6 py-4 border-b border-line">
@@ -209,6 +248,63 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+
+      {/* ── 이슈 현황 차트 ── */}
+      {!statsLoading && (
+        <div className="grid grid-cols-2 gap-4">
+          {/* 이슈 상태 도넛 */}
+          <Card>
+            <div className="px-6 py-4 border-b border-line">
+              <SectionTitle>이슈 현황</SectionTitle>
+            </div>
+            <div className="p-6">
+              {(() => {
+                const data = [
+                  { name: '열림',   value: openIssues - (criticalIssues ?? 0), color: '#3b82f6' },
+                  { name: '긴급',   value: criticalIssues,                      color: '#ef4444' },
+                  { name: '마감임박', value: upcomingMilestones.length,          color: '#f59e0b' },
+                ]
+                const total = data.reduce((s, d) => s + d.value, 0)
+                if (!total) return <p className="text-center text-sm text-content-subtle py-8">이슈 없음</p>
+                return (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
+                        {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => [`${v}건`]} />
+                      <Legend iconType="circle" iconSize={10} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )
+              })()}
+            </div>
+          </Card>
+
+          {/* 프로젝트 진행 상태 바 차트 */}
+          <Card>
+            <div className="px-6 py-4 border-b border-line">
+              <SectionTitle>프로젝트 현황</SectionTitle>
+            </div>
+            <div className="p-6">
+              {projLoading ? (
+                <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-content-subtle" /></div>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={projects.slice(0, 5).map(p => ({ name: p.systemCode || p.name.slice(0, 6), 진행중: p.status === 'active' ? 1 : 0, 완료: p.status === 'archived' ? 1 : 0 }))} layout="vertical" margin={{ left: 0, right: 16 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="진행중" fill="#4f46e5" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="완료"   fill="#10b981" radius={[0, 4, 4, 0]} />
+                    <Legend iconType="circle" iconSize={10} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
+import { UploadProvider } from './contexts/UploadContext'
 import Layout from './components/layout/Layout'
 import Dashboard from './pages/Dashboard'
 import ProjectList from './pages/ProjectList'
@@ -9,8 +10,14 @@ import DocumentEditor from './pages/DocumentEditor'
 import FileViewer from './pages/FileViewer'
 import TaskBoard from './pages/TaskBoard'
 import GanttChart from './pages/GanttChart'
+import IssueBoard from './pages/IssueBoard'
+import CalendarView from './pages/CalendarView'
+import ActivityLog from './pages/ActivityLog'
 import MemberManage from './pages/MemberManage'
 import TemplateManager from './pages/TemplateManager'
+import AISearch from './pages/AISearch'
+import SprintBoard from './pages/SprintBoard'
+import ActionItemBoard from './pages/ActionItemBoard'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 
@@ -38,6 +45,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+      <UploadProvider>
         <Routes>
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<Login />} />
@@ -53,6 +61,12 @@ export default function App() {
               <Route path="/projects/:id/view/:fileId" element={<FileViewer />} />
               <Route path="/projects/:id/tasks" element={<TaskBoard />} />
               <Route path="/projects/:id/gantt" element={<GanttChart />} />
+              <Route path="/projects/:id/issues" element={<IssueBoard />} />
+              <Route path="/projects/:id/ai-search" element={<AISearch />} />
+              <Route path="/projects/:id/sprints"      element={<SprintBoard />} />
+              <Route path="/projects/:id/action-items" element={<ActionItemBoard />} />
+              <Route path="/projects/:id/calendar" element={<CalendarView />} />
+              <Route path="/projects/:id/activity" element={<ActivityLog />} />
               <Route path="/projects/:id/members" element={<MemberManage />} />
               <Route path="/documents/:docId" element={<DocumentEditor />} />
               <Route path="/templates" element={<TemplateManager />} />
@@ -60,6 +74,7 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
+      </UploadProvider>
       </AuthProvider>
     </BrowserRouter>
   )
