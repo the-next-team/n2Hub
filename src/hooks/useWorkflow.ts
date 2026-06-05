@@ -111,40 +111,73 @@ export function useWorkflow(fileId: string | null, projectId: string | null) {
 
       if (newFile) {
         // ── 새 버전 파일 업로드 ──────────────────────────────────────
-        // 현재 파일 정보 가져오기
         const { data: curFile } = await supabase
           .from('files')
-          .select('storage_path, original_name')
+          .select('original_name, folder_path, storage_path')
           .eq('id', fileId)
           .single()
 
         if (!curFile) throw new Error('파일 정보를 찾을 수 없습니다')
 
-        const folder = curFile.storage_path.split('/').slice(0, -1).join('/')
-        const ext    = newFile.name.split('.').pop() ?? ''
+        const currentFolderPath = curFile.folder_path ?? ''
+        const oldFolderPath     = currentFolderPath ? `${currentFolderPath}/old` : 'old'
 
-        // 새 파일명: 기존 이름에서 버전 부분을 교체
-        const baseName = curFile.original_name
-          .replace(/\.[^.]+$/, '')                      // 확장자 제거
-          .replace(/_v[\d.]+$/i, '')                    // 기존 버전 제거
+        // ── old 폴더 없으면 생성 ────────────────────────────────────
+        const { data: existingOld } = await supabase
+          .from('files')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('folder_path', currentFolderPath)
+          .eq('original_name', 'old')
+          .eq('mime_type', 'folder')
+          .maybeSingle()
+
+        if (!existingOld) {
+          await supabase.from('files').insert([{
+            project_id:    projectId,
+            original_name: 'old',
+            folder_path:   currentFolderPath,
+            storage_path:  '',
+            size:          0,
+            mime_type:     'folder',
+            version:       '',
+            uploaded_by:   user.id,
+          }])
+        }
+
+        // ── 기존 파일 → old 폴더로 이동 ─────────────────────────────
+        await supabase
+          .from('files')
+          .update({
+            folder_path:   oldFolderPath,
+            is_superseded: true,
+          })
+          .eq('id', fileId)
+
+        // ── 새 파일명 생성 (버전 교체) ───────────────────────────────
+        const ext         = newFile.name.split('.').pop() ?? ''
+        const baseName    = curFile.original_name
+          .replace(/\.[^.]+$/, '')
+          .replace(/_v[\d.]+$/i, '')
         const newFileName = `${baseName}_${step.version}.${ext}`
-        const newPath     = `${folder}/${newFileName}`
+        const storagePath = `${projectId}/${crypto.randomUUID()}.${ext}`
 
-        // Storage 업로드
+        // ── Storage 업로드 ───────────────────────────────────────────
         const { error: upErr } = await supabase.storage
           .from('documents')
-          .upload(newPath, newFile, { upsert: true })
+          .upload(storagePath, newFile, { upsert: false })
         if (upErr) throw new Error(`파일 업로드 실패: ${upErr.message}`)
 
-        // 새 files 레코드 생성
+        // ── 새 files 레코드 생성 (현재 폴더에) ──────────────────────
         const { data: newFileRow } = await supabase
           .from('files')
           .insert([{
             project_id:       projectId,
             original_name:    newFileName,
-            storage_path:     newPath,
+            folder_path:      currentFolderPath,
+            storage_path:     storagePath,
             size:             newFile.size,
-            mime_type:        newFile.type,
+            mime_type:        newFile.type || 'application/octet-stream',
             version:          step.version,
             uploaded_by:      user.id,
             workflow_status:  toStatus,
@@ -156,10 +189,10 @@ export function useWorkflow(fileId: string | null, projectId: string | null) {
         if (!newFileRow) throw new Error('파일 레코드 생성 실패')
         newFileId = newFileRow.id
 
-        // 기존 파일 superseded 처리
+        // superseded_by 연결
         await supabase
           .from('files')
-          .update({ is_superseded: true, superseded_by: newFileId })
+          .update({ superseded_by: newFileId })
           .eq('id', fileId)
 
       } else {
