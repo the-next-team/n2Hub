@@ -36,6 +36,7 @@ export interface WorkflowHistory {
   changedBy: string
   changedAt: string
   authorEmail?: string
+  newFileId?: string | null   // 새 버전 파일 업로드 시
 }
 
 export interface DocumentComment {

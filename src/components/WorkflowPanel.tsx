@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History, Upload, FileText, GitBranch, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { WorkflowStatus } from '../types'
 import { WORKFLOW_STEPS, WORKFLOW_REQUIRES_APPROVAL } from '../types'
 import { useWorkflow } from '../hooks/useWorkflow'
@@ -15,19 +16,23 @@ const STATUS_COLOR: Record<WorkflowStatus, string> = {
 interface Props {
   fileId: string
   projectId: string
-  userRole?: string   // 'pm' | 'pl' | 'developer' | 'qa'
+  userRole?: string
 }
 
 export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
+  const navigate = useNavigate()
   const {
-    currentStatus, currentVersion, history, loading,
-    transitioning, nextStep, isComplete, transition,
+    currentStatus, currentVersion, history, fileVersions,
+    loading, transitioning, nextStep, isComplete, transition,
   } = useWorkflow(fileId, projectId)
 
-  const [showModal, setShowModal]     = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [comment, setComment]         = useState('')
-  const [commentError, setCommentError] = useState('')
+  const [showModal, setShowModal]         = useState(false)
+  const [showHistory, setShowHistory]     = useState(false)
+  const [showVersions, setShowVersions]   = useState(false)
+  const [comment, setComment]             = useState('')
+  const [commentError, setCommentError]   = useState('')
+  const [newFile, setNewFile]             = useState<File | null>(null)
+  const fileInputRef                      = useRef<HTMLInputElement>(null)
 
   const canApprove = userRole === 'pm' || userRole === 'pl'
 
@@ -36,23 +41,27 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
     if (WORKFLOW_REQUIRES_APPROVAL.includes(nextStep.status) && !canApprove) return
     setComment('')
     setCommentError('')
+    setNewFile(null)
     setShowModal(true)
   }
 
   async function handleConfirm() {
     if (!nextStep) return
-    if (!comment.trim()) {
-      setCommentError('전환 사유를 입력해주세요')
-      return
-    }
-    await transition(nextStep.status, comment)
+    if (!comment.trim()) { setCommentError('전환 사유를 입력해주세요'); return }
+    const newFileId = await transition(nextStep.status, comment, newFile ?? undefined)
     setShowModal(false)
     setComment('')
+    setNewFile(null)
+    // 새 버전 파일로 이동
+    if (newFileId) {
+      navigate(`/projects/${projectId}/files/${newFileId}`)
+    }
   }
 
   if (loading) return null
 
   const currentIdx = WORKFLOW_STEPS.findIndex(s => s.status === currentStatus)
+  const otherVersions = fileVersions.filter(v => v.id !== fileId)
 
   return (
     <>
@@ -66,23 +75,34 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
               {currentStatus} {currentVersion}
             </span>
           </div>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="text-xs text-content-muted hover:text-content flex items-center gap-1"
-          >
-            <History size={13} />
-            이력
-          </button>
+          <div className="flex items-center gap-2">
+            {otherVersions.length > 0 && (
+              <button
+                onClick={() => setShowVersions(!showVersions)}
+                className="text-xs text-content-muted hover:text-content flex items-center gap-1"
+              >
+                <GitBranch size={13} />
+                버전 {otherVersions.length + 1}개
+              </button>
+            )}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-xs text-content-muted hover:text-content flex items-center gap-1"
+            >
+              <History size={13} />
+              이력
+            </button>
+          </div>
         </div>
 
-        {/* 스텝 표시 */}
+        {/* 스텝 진행 바 */}
         <div className="flex items-center gap-1">
           {WORKFLOW_STEPS.map((step, idx) => {
             const done    = idx < currentIdx
             const current = idx === currentIdx
             return (
               <div key={step.status} className="flex items-center gap-1 flex-1 min-w-0">
-                <div className={`flex flex-col items-center gap-0.5 flex-1 min-w-0`}>
+                <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
                     done    ? 'bg-success border-success text-white' :
                     current ? 'bg-primary border-primary text-white' :
@@ -115,9 +135,9 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
                 <span>"{nextStep.label}" 전환은 PM·PL만 가능합니다</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-content-muted">다음 단계:</span>
-                <span className="text-xs font-medium text-content">{nextStep.label} ({nextStep.version})</span>
+              <div className="flex items-center gap-2 text-xs text-content-muted">
+                <span>다음:</span>
+                <span className="font-medium text-content">{nextStep.label} ({nextStep.version})</span>
               </div>
             )}
             <button
@@ -138,13 +158,39 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
           </div>
         )}
 
+        {/* 버전 목록 */}
+        {showVersions && otherVersions.length > 0 && (
+          <div className="pt-2 border-t border-line space-y-1.5">
+            <p className="text-[11px] font-semibold text-content-muted uppercase tracking-wider">버전 이력</p>
+            {/* 현재 버전 */}
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary-soft text-xs">
+              <FileText size={12} className="text-primary shrink-0" />
+              <span className="text-primary font-medium truncate flex-1">현재 ({currentVersion})</span>
+            </div>
+            {/* 이전 버전들 */}
+            {otherVersions.map(v => (
+              <div
+                key={v.id}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-hover cursor-pointer text-xs group"
+                onClick={() => navigate(`/projects/${projectId}/files/${v.id}`)}
+              >
+                <FileText size={12} className="text-content-subtle shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-content-muted truncate block">{v.originalName}</span>
+                  <span className="text-content-subtle">{v.workflowVersion} · {v.workflowStatus}</span>
+                </div>
+                <ExternalLink size={11} className="text-content-subtle opacity-0 group-hover:opacity-100 shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* 이력 */}
         {showHistory && (
           <div className="pt-2 border-t border-line space-y-2 max-h-48 overflow-y-auto">
-            {history.length === 0 && (
+            {history.length === 0 ? (
               <p className="text-xs text-content-muted text-center py-2">이력 없음</p>
-            )}
-            {history.map(h => (
+            ) : history.map(h => (
               <div key={h.id} className="flex gap-2 text-xs">
                 <Clock size={12} className="text-content-subtle mt-0.5 shrink-0" />
                 <div className="min-w-0">
@@ -152,7 +198,10 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
                   <span className="mx-1 text-content-subtle">·</span>
                   <span className="text-content">{h.fromStatus ?? '—'} → {h.toStatus}</span>
                   <span className="ml-1 text-content-subtle">({h.toVersion})</span>
-                  {h.comment && <p className="text-content-muted mt-0.5 truncate">{h.comment}</p>}
+                  {(h as any).newFileId && (
+                    <span className="ml-1 px-1 py-0.5 bg-primary-soft text-primary rounded text-[10px]">새 파일</span>
+                  )}
+                  {h.comment && <p className="text-content-muted mt-0.5">{h.comment}</p>}
                   <p className="text-content-subtle text-[10px]">
                     {new Date(h.changedAt).toLocaleString('ko-KR')}
                   </p>
@@ -163,7 +212,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
         )}
       </div>
 
-      {/* ── 전환 확인 모달 ── */}
+      {/* ── 전환 모달 ── */}
       {showModal && nextStep && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-surface rounded-2xl shadow-modal border border-line p-6 w-full max-w-md mx-4">
@@ -175,7 +224,8 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
               <span className="ml-2 text-xs text-content-subtle">({currentVersion} → {nextStep.version})</span>
             </p>
 
-            <div>
+            {/* 전환 사유 */}
+            <div className="mb-4">
               <label className="block text-sm font-medium text-content mb-1.5">
                 전환 사유 <span className="text-danger">*</span>
               </label>
@@ -183,7 +233,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
                 value={comment}
                 onChange={e => { setComment(e.target.value); setCommentError('') }}
                 placeholder="전환 사유를 입력하세요..."
-                rows={3}
+                rows={2}
                 className="w-full px-3 py-2 text-sm border border-line rounded-xl bg-canvas
                            focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none
                            text-content placeholder:text-content-subtle"
@@ -196,9 +246,51 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            {/* 새 버전 파일 업로드 (선택) */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-content mb-1.5">
+                새 버전 파일 <span className="text-xs text-content-muted font-normal">(선택 — 없으면 상태만 변경)</span>
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={e => setNewFile(e.target.files?.[0] ?? null)}
+              />
+              {newFile ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary-soft border border-primary/30 rounded-xl">
+                  <FileText size={14} className="text-primary shrink-0" />
+                  <span className="text-sm text-primary truncate flex-1">{newFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setNewFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    className="text-primary/60 hover:text-primary text-xs"
+                  >✕</button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5
+                             border-2 border-dashed border-line rounded-xl text-sm text-content-muted
+                             hover:border-primary/40 hover:text-primary hover:bg-primary-soft/50 transition-colors"
+                >
+                  <Upload size={14} />
+                  파일 선택 또는 드래그
+                </button>
+              )}
+              {newFile && (
+                <p className="mt-1.5 text-xs text-content-subtle">
+                  저장될 파일명: <span className="font-mono text-content-muted">
+                    {newFile.name.replace(/\.[^.]+$/, '').replace(/_v[\d.]+$/i, '')}_{nextStep.version}.{newFile.name.split('.').pop()}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setNewFile(null) }}
                 className="px-4 py-2 text-sm text-content-muted hover:text-content rounded-lg border border-line"
               >
                 취소
