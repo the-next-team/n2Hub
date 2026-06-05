@@ -46,74 +46,75 @@
   --color-danger-soft: var(--danger-soft);
 }
 
-:root {
-  /* 브랜드 — 인디고 */
-  --primary: #4f46e5;       /* indigo-600 */
-  --primary-hover: #4338ca; /* indigo-700 */
-  --primary-soft: #eef2ff;  /* indigo-50 */
+@layer base {
+  /* ── 디자인 토큰 (CSS 변수) ── */
+  :root {
+    /* 브랜드 — 인디고 */
+    --primary: #4f46e5;       /* indigo-600 */
+    --primary-hover: #4338ca; /* indigo-700 */
+    --primary-soft: #eef2ff;  /* indigo-50 */
 
-  /* 뉴트럴 — zinc 램프 (중립 회색) */
-  --canvas: #fafafa;
-  --surface: #ffffff;
-  --surface-hover: #f4f4f5; /* zinc-100 */
-  --line: #e8e8ec;
+    /* 뉴트럴 — zinc 램프 */
+    --canvas: #fafafa;
+    --surface: #ffffff;
+    --surface-hover: #f4f4f5;
+    --line: #e8e8ec;
 
-  --content: #18181b;        /* zinc-900 */
-  --content-muted: #71717a;  /* zinc-500 */
-  --content-subtle: #a1a1aa; /* zinc-400 */
+    --content: #18181b;
+    --content-muted: #71717a;
+    --content-subtle: #a1a1aa;
 
-  --success: #15803d;        /* green-700 */
-  --success-soft: #dcfce7;   /* green-100 */
-  --warning: #c2410c;        /* orange-700 */
-  --warning-soft: #ffedd5;   /* orange-100 */
-  --danger: #b91c1c;         /* red-700 */
-  --danger-soft: #fee2e2;    /* red-100 */
-}
+    --success: #15803d;
+    --success-soft: #dcfce7;
+    --warning: #c2410c;
+    --warning-soft: #ffedd5;
+    --danger: #b91c1c;
+    --danger-soft: #fee2e2;
+  }
 
-.dark {
-  --primary: #818cf8;       /* indigo-400 */
-  --primary-hover: #a5b4fc; /* indigo-300 */
-  --primary-soft: #232136;  /* indigo-tinted dark */
+  .dark {
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --primary-soft: #232136;
 
-  --canvas: #0a0a0b;
-  --surface: #161618;
-  --surface-hover: #202023;
-  --line: #28282d;
+    --canvas: #0a0a0b;
+    --surface: #161618;
+    --surface-hover: #202023;
+    --line: #28282d;
 
-  --content: #ededf0;
-  --content-muted: #a1a1aa;
-  --content-subtle: #71717a;
+    --content: #ededf0;
+    --content-muted: #a1a1aa;
+    --content-subtle: #71717a;
 
-  --success: #4ade80;                      /* green-400 */
-  --success-soft: rgb(34 197 94 / 0.15);
-  --warning: #fb923c;                      /* orange-400 */
-  --warning-soft: rgb(249 115 22 / 0.15);
-  --danger: #f87171;                       /* red-400 */
-  --danger-soft: rgb(239 68 68 / 0.15);
-}
+    --success: #4ade80;
+    --success-soft: rgb(34 197 94 / 0.15);
+    --warning: #fb923c;
+    --warning-soft: rgb(249 115 22 / 0.15);
+    --danger: #f87171;
+    --danger-soft: rgb(239 68 68 / 0.15);
+  }
 
-/* 라이트 아일랜드 — 서드파티 편집기(canvas 그리드/문서 용지)는 다크화가 불가하거나
-   부자연스러워, 해당 영역을 다크모드에서도 일관된 라이트 작업면으로 렌더한다.
-   뉴트럴 토큰을 라이트로 재선언하면 하위 트리(우리 툴바 포함)가 모두 라이트가 된다. */
-.light-island {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef2ff;
-  --canvas: #fafafa;
-  --surface: #ffffff;
-  --surface-hover: #f4f4f5;
-  --line: #e8e8ec;
-  --content: #18181b;
-  --content-muted: #71717a;
-  --content-subtle: #a1a1aa;
-  --success: #15803d;
-  --success-soft: #dcfce7;
-  --warning: #c2410c;
-  --warning-soft: #ffedd5;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
-  color-scheme: light;
-}
+  /* 라이트 아일랜드 — 다크모드에서도 라이트로 고정되는 영역 */
+  .light-island {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-soft: #eef2ff;
+    --canvas: #fafafa;
+    --surface: #ffffff;
+    --surface-hover: #f4f4f5;
+    --line: #e8e8ec;
+    --content: #18181b;
+    --content-muted: #71717a;
+    --content-subtle: #a1a1aa;
+    --success: #15803d;
+    --success-soft: #dcfce7;
+    --warning: #c2410c;
+    --warning-soft: #ffedd5;
+    --danger: #b91c1c;
+    --danger-soft: #fee2e2;
+    color-scheme: light;
+  }
+} /* end @layer base (tokens) */
 
 @layer base {
   html {
