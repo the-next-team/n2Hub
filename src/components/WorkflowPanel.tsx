@@ -17,9 +17,10 @@ interface Props {
   fileId: string
   projectId: string
   userRole?: string
+  onTransitioned?: () => void
 }
 
-export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
+export default function WorkflowPanel({ fileId, projectId, userRole, onTransitioned }: Props) {
   const navigate = useNavigate()
   const {
     currentStatus, currentVersion, history, fileVersions,
@@ -52,6 +53,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole }: Props) {
     setShowModal(false)
     setComment('')
     setNewFile(null)
+    onTransitioned?.()
     // 새 버전 파일로 이동
     if (newFileId) {
       navigate(`/projects/${projectId}/files/${newFileId}`)

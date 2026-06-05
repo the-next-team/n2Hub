@@ -995,6 +995,15 @@ export default function FileViewer() {
                 fileId={meta.id}
                 projectId={projectId}
                 userRole={userRole}
+                onTransitioned={async () => {
+                  // 파일명 변경 반영: DB에서 최신 original_name 다시 로드
+                  const { data } = await supabase
+                    .from('files')
+                    .select('original_name, storage_path')
+                    .eq('id', meta.id)
+                    .single()
+                  if (data) setMeta(prev => prev ? { ...prev, original_name: data.original_name, storage_path: data.storage_path } : prev)
+                }}
               />
               {/* AI 버전 요약 */}
               <div className="border border-line rounded-xl bg-surface p-4 space-y-2">
