@@ -16,6 +16,9 @@ export interface StorageItem {
   version?: string
   // 태스크 연결
   taskId?: string | null
+  // 워크플로우
+  workflowStatus?: string
+  workflowVersion?: string
 }
 
 function parseFileName(name: string): { title: string; version: string } {
@@ -44,6 +47,8 @@ function mapRow(row: any): StorageItem {
     title,
     version: row.version || version,
     taskId: row.task_id ?? null,
+    workflowStatus: row.workflow_status ?? '최초생성',
+    workflowVersion: row.workflow_version ?? 'v0.1',
   }
 }
 

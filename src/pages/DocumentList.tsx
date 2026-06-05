@@ -428,6 +428,7 @@ export default function DocumentList() {
                   <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap">이름</th>
                   <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap w-32">연결 태스크</th>
                   <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap w-16">버전</th>
+                  <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap w-24">워크플로우</th>
                   <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap w-20">크기</th>
                   <th className="text-left px-4 py-2 font-medium text-content-muted text-xs whitespace-nowrap w-24">날짜</th>
                   <th className="px-4 py-2 w-36" />
@@ -911,6 +912,19 @@ function FileRow({ node, tasks, editors, onDownload, onDelete, onOpen, onLinkTas
         {item.version && (
           <span className="inline-block px-1.5 py-0.5 rounded text-xs font-mono bg-surface-hover text-content-muted">
             {item.version}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-2.5 w-24">
+        {!item.isFolder && item.workflowStatus && (
+          <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+            item.workflowStatus === '최초생성' ? 'bg-surface-hover text-content-muted border-line' :
+            item.workflowStatus === '작성중'   ? 'bg-warning-soft text-warning border-warning/30' :
+            item.workflowStatus === '검토중'   ? 'bg-primary-soft text-primary border-primary/30' :
+            item.workflowStatus === '승인완료' ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300' :
+                                                 'bg-success-soft text-success border-success/30'
+          }`}>
+            {item.workflowStatus}
           </span>
         )}
       </td>

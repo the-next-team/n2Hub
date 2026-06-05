@@ -69,6 +69,11 @@ async function request(
   }
 }
 
+/** 단순 문자열 프롬프트 → 응답 (외부 사용 가능) */
+export async function chatSimple(prompt: string): Promise<string> {
+  return chat(prompt)
+}
+
 async function chat(userMessage: string, maxTokens = 1024): Promise<string> {
   assertKeys()
   const msgs = [

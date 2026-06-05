@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Download, Loader2, ArrowLeft, FileDown, Sparkles, X, MessageSquare, Send } from 'lucide-react'
+import { ChevronRight, Download, Loader2, ArrowLeft, FileDown, Sparkles, X, MessageSquare, Send, GitBranch, MessageCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import OnlyOfficeEditor from '../components/editor/OnlyOfficeEditor'
 import { Button } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { useAuth } from '../lib/auth'
 import CoverPage, { type CoverMeta } from '../components/CoverPage'
-import { summarizeDocument, askQuestion, convertToMarkdown } from '../lib/groq'
+import { summarizeDocument, askQuestion, convertToMarkdown, chatSimple } from '../lib/groq'
 import { saveMdToProject } from '../lib/saveMdToProject'
 import { useRegisterFileSession } from '../hooks/useFileSession'
+import WorkflowPanel from '../components/WorkflowPanel'
+import CommentPanel from '../components/CommentPanel'
+import { useDocumentComments } from '../hooks/useDocumentComments'
 
 /* ── 마크다운 / 텍스트 뷰어 컴포넌트 ── */
 function MarkdownViewer({ buffer, fileName, onDownload }: {
@@ -148,7 +151,14 @@ export default function FileViewer() {
   const { user }     = useAuth()
   useRegisterFileSession(fileId)
   const [savingToProject, setSavingToProject] = useState(false)
-  const [savedToProject,  setSavedToProject]  = useState(false)  // 파일 열람 세션 등록 (동시 편집 표시용)
+  const [savedToProject,  setSavedToProject]  = useState(false)
+  // 워크플로우·댓글 패널
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
+  const [userRole, setUserRole]           = useState<string>('')
+  const { totalCount: commentCount }      = useDocumentComments(fileId ?? null, projectId ?? null)
+  // AI 버전 요약
+  const [versionSummary, setVersionSummary]         = useState('')
+  const [generatingVersionSummary, setGeneratingVersionSummary] = useState(false)
 
   // AI 요약
   const [showSummary, setShowSummary]       = useState(false)
@@ -293,7 +303,48 @@ export default function FileViewer() {
           setClientLogoUrl(data.logo_url ?? '')
         }
       })
-  }, [projectId])
+    // 현재 사용자의 역할 가져오기
+    if (user?.id) {
+      supabase.from('project_members')
+        .select('role')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => { if (data) setUserRole(data.role ?? '') })
+    }
+  }, [projectId, user?.id])
+
+  // AI 버전 변경 요약
+  async function handleVersionSummary() {
+    if (!meta || !fileId) return
+    setGeneratingVersionSummary(true)
+    setVersionSummary('')
+    try {
+      // 워크플로우 이력 조회
+      const { data: hist } = await supabase
+        .from('workflow_history')
+        .select('from_status, to_status, from_version, to_version, comment, changed_at')
+        .eq('file_id', fileId)
+        .order('changed_at', { ascending: true })
+
+      if (!hist?.length) {
+        setVersionSummary('아직 버전 변경 이력이 없습니다.')
+        return
+      }
+
+      const historyText = hist.map((h: any) =>
+        `• ${h.from_version ?? '최초'} → ${h.to_version} (${h.from_status ?? '최초생성'} → ${h.to_status}): ${h.comment ?? '코멘트 없음'} [${new Date(h.changed_at).toLocaleDateString('ko-KR')}]`
+      ).join('\n')
+
+      const prompt = `다음은 "${meta.original_name}" 문서의 버전 변경 이력입니다:\n\n${historyText}\n\n이 변경 이력을 바탕으로 문서가 어떻게 발전했는지 간략히 요약해주세요. 한국어로 3-5문장 이내로 작성해주세요.`
+      const summary = await chatSimple(prompt)
+      setVersionSummary(summary)
+    } catch (err) {
+      setVersionSummary(`오류: ${(err as Error).message}`)
+    } finally {
+      setGeneratingVersionSummary(false)
+    }
+  }
 
   // OnlyOffice 닫기 → 산출물 목록으로 이동
   const handleOOClose = useCallback(() => {
@@ -758,6 +809,21 @@ export default function FileViewer() {
               </button>
             </>
           )}
+          {/* 워크플로우 & 댓글 패널 */}
+          <button
+            onClick={() => setShowInfoPanel(v => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors ${
+              showInfoPanel
+                ? 'border-primary bg-primary-soft text-primary'
+                : 'border-line hover:border-primary/40 hover:bg-primary-soft text-content-muted hover:text-primary'
+            }`}
+          >
+            <GitBranch size={12} />
+            <span>워크플로우</span>
+            {commentCount > 0 && (
+              <span className="bg-primary text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">{commentCount}</span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -908,6 +974,55 @@ export default function FileViewer() {
               <Download size={14} />
               파일 다운로드
             </Button>
+          </div>
+        )}
+
+        {/* ── 워크플로우 & 댓글 패널 ── */}
+        {showInfoPanel && meta && projectId && (
+          <div className="w-80 shrink-0 border-l border-line bg-surface flex flex-col overflow-y-auto animate-slide-in-right">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-line shrink-0">
+              <div className="flex items-center gap-2">
+                <GitBranch size={14} className="text-primary" />
+                <span className="text-sm font-semibold text-content">워크플로우 & 댓글</span>
+              </div>
+              <button onClick={() => setShowInfoPanel(false)} className="text-content-subtle hover:text-content">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+              {/* 워크플로우 */}
+              <WorkflowPanel
+                fileId={meta.id}
+                projectId={projectId}
+                userRole={userRole}
+              />
+              {/* AI 버전 요약 */}
+              <div className="border border-line rounded-xl bg-surface p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">AI 버전 요약</span>
+                  <button
+                    onClick={handleVersionSummary}
+                    disabled={generatingVersionSummary}
+                    className="text-xs px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-40 flex items-center gap-1 dark:bg-purple-900/20 dark:text-purple-300"
+                  >
+                    {generatingVersionSummary
+                      ? <><Loader2 size={11} className="animate-spin" /> 분석 중...</>
+                      : <><Sparkles size={11} /> 요약 생성</>}
+                  </button>
+                </div>
+                {versionSummary && (
+                  <p className="text-xs text-content leading-relaxed">{versionSummary}</p>
+                )}
+                {!versionSummary && !generatingVersionSummary && (
+                  <p className="text-xs text-content-subtle">버전 이력을 AI가 요약합니다</p>
+                )}
+              </div>
+              {/* 댓글 */}
+              <CommentPanel
+                fileId={meta.id}
+                projectId={projectId}
+              />
+            </div>
           </div>
         )}
 
