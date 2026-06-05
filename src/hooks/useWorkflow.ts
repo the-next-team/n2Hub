@@ -163,60 +163,33 @@ export function useWorkflow(fileId: string | null, projectId: string | null) {
           .eq('id', fileId)
 
       } else {
-        // ── 파일 없이 전환: 파일명도 버전에 맞게 자동 rename ──────────
+        // ── 파일 없이 전환: original_name의 버전 suffix만 DB에서 교체 ─
+        // Storage 경로는 UUID 기반이므로 변경 불필요, 표시명만 업데이트
         const { data: curFile } = await supabase
           .from('files')
-          .select('storage_path, original_name, mime_type')
+          .select('original_name')
           .eq('id', fileId)
           .single()
 
-        if (curFile) {
-          const folder   = curFile.storage_path.split('/').slice(0, -1).join('/')
-          const ext      = curFile.original_name.split('.').pop() ?? ''
-          // 파일명에서 버전 suffix 제거 후 새 버전으로 교체
-          const baseName = curFile.original_name
-            .replace(/\.[^.]+$/, '')          // 확장자 제거
-            .replace(/_v[\d.]+$/i, '')         // 기존 _v0.x 제거
-          const newFileName = `${baseName}_${step.version}.${ext}`
-          const newPath     = `${folder}/${newFileName}`
+        const newOriginalName = curFile
+          ? (() => {
+              const ext      = curFile.original_name.split('.').pop() ?? ''
+              const baseName = curFile.original_name
+                .replace(/\.[^.]+$/, '')       // 확장자 제거
+                .replace(/_v[\d.]+$/i, '')      // 기존 _v0.x 제거
+              return `${baseName}_${step.version}.${ext}`
+            })()
+          : null
 
-          // Storage 파일 이동 (rename)
-          if (newPath !== curFile.storage_path) {
-            const { error: moveErr } = await supabase.storage
-              .from('documents')
-              .move(curFile.storage_path, newPath)
-
-            if (!moveErr) {
-              // DB 파일 레코드 업데이트
-              await supabase
-                .from('files')
-                .update({
-                  workflow_status:  toStatus,
-                  workflow_version: step.version,
-                  original_name:    newFileName,
-                  storage_path:     newPath,
-                  version:          step.version,
-                })
-                .eq('id', fileId)
-            } else {
-              // move 실패 시 (이미 동일 경로 등) 상태만 업데이트
-              await supabase
-                .from('files')
-                .update({ workflow_status: toStatus, workflow_version: step.version })
-                .eq('id', fileId)
-            }
-          } else {
-            await supabase
-              .from('files')
-              .update({ workflow_status: toStatus, workflow_version: step.version })
-              .eq('id', fileId)
-          }
-        } else {
-          await supabase
-            .from('files')
-            .update({ workflow_status: toStatus, workflow_version: step.version })
-            .eq('id', fileId)
-        }
+        await supabase
+          .from('files')
+          .update({
+            workflow_status:  toStatus,
+            workflow_version: step.version,
+            version:          step.version,
+            ...(newOriginalName ? { original_name: newOriginalName } : {}),
+          })
+          .eq('id', fileId)
       }
 
       // 워크플로우 이력 INSERT
