@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Download, Loader2, ArrowLeft, FileDown, Sparkles, X, MessageSquare, Send, GitBranch, MessageCircle } from 'lucide-react'
+import { ChevronRight, Download, Loader2, ArrowLeft, FileDown, Sparkles, X, MessageSquare, Send, GitBranch, MessageCircle, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import OnlyOfficeEditor from '../components/editor/OnlyOfficeEditor'
 import { Button } from '../components/ui'
@@ -678,6 +678,23 @@ export default function FileViewer() {
     URL.revokeObjectURL(url)
   }
 
+  // 파일 삭제
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!meta) return
+    setDeleting(true)
+    try {
+      await supabase.storage.from('documents').remove([meta.storage_path])
+      await supabase.from('files').delete().eq('id', meta.id)
+      navigate(`/projects/${projectId}/documents`)
+    } catch {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center gap-3 text-content-subtle">
@@ -790,8 +807,51 @@ export default function FileViewer() {
               <span className="bg-primary text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">{commentCount}</span>
             )}
           </button>
+          {/* 삭제 버튼 */}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-line hover:border-danger/40 hover:bg-danger-soft text-content-muted hover:text-danger transition-colors"
+          >
+            <Trash2 size={12} />
+            <span>삭제</span>
+          </button>
         </div>
       </div>
+
+      {/* ── 삭제 확인 모달 ── */}
+      {showDeleteConfirm && meta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-surface rounded-2xl shadow-modal border border-line p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-danger-soft flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-danger" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-content">파일 삭제</h3>
+                <p className="text-xs text-content-muted mt-0.5">삭제하면 복구할 수 없습니다</p>
+              </div>
+            </div>
+            <p className="text-sm text-content-muted mb-5 bg-surface-hover rounded-lg px-3 py-2 truncate">
+              {meta.original_name}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-sm border border-line rounded-xl text-content-muted hover:text-content"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-danger text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MD 변환 모달 */}
       {showMdModal && (
