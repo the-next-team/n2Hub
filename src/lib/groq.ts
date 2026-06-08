@@ -238,6 +238,32 @@ export async function generateMeetingMinutes(
   )
 }
 
+/** 회의 STT 녹취록 → 회의록 (녹취 내용만 사용, 창작 금지) */
+export async function formatMeetingTranscript(
+  transcript: string,
+  info: { date: string; attendees: string; title: string },
+): Promise<string> {
+  if (!transcript.trim()) return ''
+  return chat(
+    `다음은 회의 음성 녹취를 텍스트로 변환한 원본입니다.\n` +
+    `반드시 녹취 내용에 있는 내용만 정리하고, 녹취에 없는 내용은 절대 추가하지 마세요.\n` +
+    `내용을 지어내거나 추측하지 마세요. 정보가 없는 항목은 "녹취 내용 없음"으로 표시하세요.\n\n` +
+    `회의 기본 정보:\n` +
+    `- 일시: ${info.date}\n` +
+    `- 제목: ${info.title}\n` +
+    `- 참석자: ${info.attendees || '미기재'}\n\n` +
+    `[원본 녹취록]\n${transcript.slice(0, 12000)}\n\n` +
+    `아래 형식으로 정리하세요 (녹취에 없으면 해당 항목은 "녹취 내용 없음"):\n` +
+    `# 회의록\n` +
+    `## 1. 회의 개요\n` +
+    `## 2. 주요 논의 내용 (녹취 내용 그대로 정리)\n` +
+    `## 3. 결정사항 (녹취에서 확인된 것만)\n` +
+    `## 4. 액션아이템 (녹취에서 언급된 것만)\n` +
+    `## 5. 기타`,
+    2000,
+  )
+}
+
 /** AI 문서 검색: 파일 목록에서 쿼리와 관련된 문서 찾기 */
 export async function searchDocumentsByAI(
   query: string,

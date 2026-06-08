@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { transcribeAudio, summarizeMeeting, generateMeetingMinutes } from '../lib/groq'
+import { transcribeAudio, summarizeMeeting, formatMeetingTranscript } from '../lib/groq'
 import { saveMdToProject } from '../lib/saveMdToProject'
 
 export type MeetingState = 'idle' | 'recording' | 'paused' | 'processing' | 'done'
@@ -180,14 +180,14 @@ export function useMeeting(projectId: string) {
       setSummary(aiSummary)
     } catch { aiSummary = '' }
 
-    // 회의록 생성
+    // 회의록 생성 (녹취 내용만 사용)
     setChunkStatus('회의록 작성 중...')
     let aiMinutes = ''
     try {
-      aiMinutes = await generateMeetingMinutes(fullTranscript, {
-        date: new Date().toLocaleDateString('ko-KR'),
+      aiMinutes = await formatMeetingTranscript(fullTranscript, {
+        date:      new Date().toLocaleDateString('ko-KR'),
         attendees: session?.attendees ?? '',
-        agenda: session?.title ?? '회의',
+        title:     session?.title ?? '회의',
       })
       setMinutes(aiMinutes)
     } catch { aiMinutes = '' }
