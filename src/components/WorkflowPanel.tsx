@@ -135,15 +135,6 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             >
               <HelpCircle size={13} />
             </button>
-            {otherVersions.length > 0 && (
-              <button
-                onClick={() => setShowVersions(!showVersions)}
-                className="text-xs text-content-muted hover:text-content flex items-center gap-1"
-              >
-                <GitBranch size={13} />
-                버전 {otherVersions.length + 1}개
-              </button>
-            )}
             <button
               onClick={() => setShowHistory(!showHistory)}
               className="text-xs text-content-muted hover:text-content flex items-center gap-1"
