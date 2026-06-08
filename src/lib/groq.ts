@@ -378,6 +378,13 @@ const WHISPER_HALLUCINATION_PATTERNS = [
   /조회수\s*\d+/gi,
   /업로드\s*일시/gi,
   /MBC|KBS|SBS|JTBC/g,
+  // 유튜브 아웃로 환각 패턴
+  /다음\s*영상에서\s*만나요/gi,
+  /영상\s*봐\s*주셔서\s*감사/gi,
+  /시청해\s*주셔서\s*감사/gi,
+  /좋아요와\s*구독/gi,
+  /구독\s*눌러/gi,
+  /알림\s*설정/gi,
 ]
 
 function removeHallucinations(text: string): string {

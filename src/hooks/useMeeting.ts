@@ -43,8 +43,8 @@ export function useMeeting(projectId: string) {
   const [error, setError]             = useState<string>('')
   const [chunkStatus, setChunkStatus] = useState<string>('')
 
-  const chunksRef       = useRef<Blob[]>([])
-  const headerChunkRef  = useRef<Blob | null>(null)  // WebM 헤더 청크 보존
+  const allChunksRef    = useRef<Blob[]>([])   // 전체 청크 누적 (헤더 포함)
+  const sentUpToRef     = useRef(0)            // 이미 전송한 청크 인덱스
   const mimeTypeRef     = useRef<string>('')
   const recorderRef     = useRef<MediaRecorder | null>(null)
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -62,17 +62,22 @@ export function useMeeting(projectId: string) {
       : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  // 현재 청크 → 헤더 보존 방식으로 완전한 파일 생성 후 Whisper 전송
+  // 새로 쌓인 청크만 Whisper 전송 (헤더는 항상 첫 번째 청크로 자동 포함)
   const sendChunks = useCallback(async () => {
-    if (!chunksRef.current.length) return
-    const mime = mimeTypeRef.current || 'audio/webm'
+    const all  = allChunksRef.current
+    const from = sentUpToRef.current
+    if (all.length <= from) return  // 새 청크 없음
 
-    // 헤더 청크를 앞에 붙여서 완전한 파일 생성
-    const parts = headerChunkRef.current
-      ? [headerChunkRef.current, ...chunksRef.current]
-      : [...chunksRef.current]
-
-    chunksRef.current = []  // 누적 청크 초기화 (헤더는 유지)
+    const mime  = mimeTypeRef.current || 'audio/webm'
+    // 항상 처음부터 (헤더 포함) 현재까지의 청크로 완전한 파일 생성
+    // → 중복 전송이지만 Whisper는 전체 맥락을 봐서 품질이 더 좋음
+    // → 단, 너무 커지면 최근 구간만 전송
+    const MAX_CHUNKS = 60  // 최대 60초 분량
+    const startIdx   = Math.max(0, all.length - MAX_CHUNKS)
+    const parts      = startIdx === 0
+      ? all.slice(0, all.length)                // 처음부터 — 헤더 자연 포함
+      : [all[0], ...all.slice(startIdx)]        // 헤더(첫청크) + 최근 구간
+    sentUpToRef.current = all.length
 
     const blob = new Blob(parts, { type: mime })
     if (blob.size < 500) return
@@ -134,8 +139,9 @@ export function useMeeting(projectId: string) {
 
     const mime = getBestMimeType()
     mimeTypeRef.current = mime
-    headerChunkRef.current = null
-    isActiveRef.current = true
+    allChunksRef.current = []
+    sentUpToRef.current  = 0
+    isActiveRef.current  = true
 
     const recorder = createRecorder(stream, mime)
     recorderRef.current = recorder
@@ -143,26 +149,16 @@ export function useMeeting(projectId: string) {
     recorder.onerror = (e: any) => {
       setError(`녹음 오류: ${e.error?.message ?? '알 수 없는 오류'}`)
     }
-
-    let isFirstChunk = true
     recorder.ondataavailable = (e) => {
-      if (!e.data?.size) return
-      if (isFirstChunk) {
-        // 첫 청크 = WebM 헤더 포함 → 별도 보존
-        headerChunkRef.current = e.data
-        isFirstChunk = false
-      } else {
-        chunksRef.current.push(e.data)
-      }
+      if (e.data?.size > 0) allChunksRef.current.push(e.data)
     }
 
-    // 1초마다 데이터 수집
+    // 1초마다 청크 수집
     recorder.start(1000)
     setState('recording')
 
     elapsedTimerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
-    // 30초마다 Whisper 전송 (recorder 재시작 없이)
-    chunkTimerRef.current = setInterval(sendChunks, CHUNK_MS)
+    chunkTimerRef.current   = setInterval(sendChunks, CHUNK_MS)
   }, [projectId, sendChunks])
 
   // 일시 정지 / 재개
