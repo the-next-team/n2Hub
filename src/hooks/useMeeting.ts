@@ -45,20 +45,33 @@ export function useMeeting(projectId: string) {
       : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  // 30초 청크를 Whisper로 전송
-  const flushChunk = useCallback(async () => {
-    if (!chunksRef.current.length) return
-    const blob = new Blob(chunksRef.current, { type: chunksRef.current[0].type })
-    chunksRef.current = []
-    if (blob.size < 1000) return // 너무 작으면 무시
+  // 지원되는 MIME 타입 찾기 (브라우저별 호환)
+  function getBestMimeType(): string {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ]
+    return candidates.find(t => MediaRecorder.isTypeSupported(t)) ?? ''
+  }
 
-    setChunkStatus('변환 중...')
+  // 청크 → Whisper 전송
+  const flushChunk = useCallback(async (mimeOverride?: string) => {
+    if (!chunksRef.current.length) return
+    const mime = mimeOverride ?? (chunksRef.current[0]?.type ?? 'audio/webm')
+    const blob = new Blob(chunksRef.current, { type: mime })
+    chunksRef.current = []
+
+    // 100바이트 미만은 빈 오디오로 간주
+    if (blob.size < 100) return
+
+    setChunkStatus(`변환 중... (${(blob.size / 1024).toFixed(0)}KB)`)
     try {
       const text = await transcribeAudio(blob)
-      if (text) {
+      if (text.trim()) {
         setTranscript(prev => {
           const next = prev ? `${prev}\n${text}` : text
-          // DB 실시간 업데이트
           if (sessionIdRef.current) {
             supabase.from('meetings')
               .update({ transcript: next })
@@ -69,7 +82,9 @@ export function useMeeting(projectId: string) {
         })
       }
     } catch (err) {
-      console.error('STT 오류:', err)
+      // 오류를 상태로 노출 (조용히 삼키지 않음)
+      const msg = (err as Error).message
+      setError(`STT 오류: ${msg}`)
     } finally {
       setChunkStatus('')
     }
@@ -109,25 +124,37 @@ export function useMeeting(projectId: string) {
       attendees: row.attendees, startedAt: row.started_at, transcript: '',
     })
 
-    // MediaRecorder 시작
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : 'audio/ogg;codecs=opus'
-    const recorder = new MediaRecorder(stream, { mimeType })
+    // MediaRecorder 시작 — 브라우저 지원 MIME 자동 선택
+    const mimeType = getBestMimeType()
+    let recorder: MediaRecorder
+    try {
+      recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
+    } catch (e) {
+      setError(`녹음 초기화 실패: ${(e as Error).message}`)
+      stream.getTracks().forEach(t => t.stop())
+      return
+    }
     mediaRecorderRef.current = recorder
 
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data)
+    recorder.onerror = (e) => {
+      setError(`녹음 오류: ${(e as any).error?.message ?? '알 수 없는 오류'}`)
     }
 
-    recorder.start(1000) // 1초마다 ondataavailable 호출
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+    }
+
+    // 5초마다 청크 수집 (ondataavailable 주기)
+    recorder.start(5000)
     setState('recording')
 
     // 경과 타이머
     elapsedTimerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
 
-    // 30초마다 청크 처리
-    chunkTimerRef.current = setInterval(flushChunk, CHUNK_MS)
+    // 30초마다 Whisper 전송
+    chunkTimerRef.current = setInterval(() => flushChunk(mimeType || undefined), CHUNK_MS)
   }, [projectId, flushChunk])
 
   // 일시 정지 / 재개
@@ -153,13 +180,16 @@ export function useMeeting(projectId: string) {
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
     if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current)
 
-    // 마지막 청크 처리 (recorder 정지 후 남은 데이터 flush)
-    mediaRecorderRef.current.stop()
-    streamRef.current?.getTracks().forEach(t => t.stop())
+    // recorder.stop() → onstop 이벤트 대기 후 마지막 청크 flush
+    const recorder = mediaRecorderRef.current
+    const mimeType = recorder.mimeType
 
-    // 잠시 대기 후 마지막 청크 전송
-    await new Promise(r => setTimeout(r, 1500))
-    await flushChunk()
+    await new Promise<void>(resolve => {
+      recorder.onstop = () => resolve()
+      recorder.stop()
+    })
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    await flushChunk(mimeType || undefined)
 
     // 현재 전체 transcript 가져오기
     const { data: row } = await supabase

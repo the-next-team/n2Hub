@@ -270,6 +270,12 @@ export default function MeetingRoom() {
                             {chunkStatus}
                           </span>
                         )}
+                        {error && (
+                          <span className="flex items-center gap-1 text-danger ml-2 text-xs">
+                            <AlertCircle size={12} />
+                            {error}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
