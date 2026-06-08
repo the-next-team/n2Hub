@@ -365,6 +365,30 @@ export async function generateDocumentDraft(
 }
 
 /** Groq Whisper STT — 오디오 Blob → 텍스트 변환 */
+// Whisper 한국어 환각 패턴 (학습 데이터에서 유래한 잡음)
+const WHISPER_HALLUCINATION_PATTERNS = [
+  /한글\s*자막\s*by\s*\S+/gi,
+  /자막\s*by\s*\S+/gi,
+  /번역\s*by\s*\S+/gi,
+  /편집\s*by\s*\S+/gi,
+  /구독과\s*좋아요\s*부탁/gi,
+  /좋아요\s*구독\s*알림/gi,
+  /이\s*자막은\s*.+\s*작성/gi,
+  /동영상\s*(제목|길이|설명)/gi,
+  /조회수\s*\d+/gi,
+  /업로드\s*일시/gi,
+  /MBC|KBS|SBS|JTBC/g,
+]
+
+function removeHallucinations(text: string): string {
+  let result = text
+  for (const pattern of WHISPER_HALLUCINATION_PATTERNS) {
+    result = result.replace(pattern, '')
+  }
+  // 빈 줄 정리
+  return result.replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   if (!GQ_KEY) throw new Error('Groq API 키가 설정되지 않았습니다.')
   const form = new FormData()
@@ -373,6 +397,9 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   form.append('model', 'whisper-large-v3-turbo')
   form.append('language', 'ko')
   form.append('response_format', 'text')
+  // prompt으로 회의 맥락 설정 → 유튜브 자막 패턴 환각 억제
+  form.append('prompt', '이것은 업무 회의 녹음입니다. 참석자들의 발언을 그대로 받아쓰세요.')
+
   const res = await fetch(`${GQ_BASE}/audio/transcriptions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${GQ_KEY}` },
@@ -382,7 +409,8 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     const err = await res.json().catch(() => ({}))
     throw new Error(err?.error?.message ?? `Whisper 오류 (${res.status})`)
   }
-  return (await res.text()).trim()
+  const raw = (await res.text()).trim()
+  return removeHallucinations(raw)
 }
 
 /** 회의 녹취록 → 핵심 요약 (불릿 포인트) */
