@@ -397,8 +397,6 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   form.append('model', 'whisper-large-v3-turbo')
   form.append('language', 'ko')
   form.append('response_format', 'text')
-  // prompt으로 회의 맥락 설정 → 유튜브 자막 패턴 환각 억제
-  form.append('prompt', '이것은 업무 회의 녹음입니다. 참석자들의 발언을 그대로 받아쓰세요.')
 
   const res = await fetch(`${GQ_BASE}/audio/transcriptions`, {
     method: 'POST',
