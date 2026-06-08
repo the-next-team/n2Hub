@@ -37,8 +37,21 @@ export default function MeetingRoom() {
   const {
     state, transcript, summary, minutes,
     elapsed, elapsedFormatted, error, chunkStatus,
-    startMeeting, togglePause, endMeeting,
+    startMeeting, togglePause, endMeeting, generateMinutes,
+    setTranscript,
   } = useMeeting(projectId!)
+
+  // 편집 가능한 녹취록 (회의 종료 후 수정용)
+  const [editableTranscript, setEditableTranscript] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+
+  // 회의 종료 시 편집 모드로
+  useEffect(() => {
+    if (state === 'done' && transcript && !minutes) {
+      setEditableTranscript(transcript)
+      setIsEditing(true)
+    }
+  }, [state, transcript, minutes])
 
   const { meetings, loading: meetingsLoading, deleteMeeting } = useMeetings(projectId!)
 
@@ -319,71 +332,85 @@ export default function MeetingRoom() {
           )}
 
           {/* ── 완료 ── */}
-          {isDone && (
+          {isDone && !minutes && (
+            /* ── STEP 1: 녹취록 편집 ── */
             <div className="space-y-4">
-              {/* 완료 배너 */}
+              <div className="flex items-center gap-3 px-5 py-4 bg-warning-soft border border-warning/20 rounded-2xl">
+                <FileText size={20} className="text-warning shrink-0" />
+                <div>
+                  <p className="font-semibold text-warning">녹취가 완료됐습니다</p>
+                  <p className="text-sm text-warning/80 mt-0.5">
+                    아래 녹취록에서 불필요한 내용(배경음, 잡음 등)을 삭제한 뒤 회의록을 생성하세요
+                  </p>
+                </div>
+              </div>
+
+              <div className="border border-line rounded-2xl bg-surface overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-line">
+                  <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">
+                    녹취록 편집 <span className="text-warning ml-1">· 불필요한 내용을 직접 삭제하세요</span>
+                  </span>
+                  <span className="text-xs text-content-subtle">{editableTranscript.length}자</span>
+                </div>
+                <textarea
+                  value={editableTranscript}
+                  onChange={e => setEditableTranscript(e.target.value)}
+                  className="w-full p-5 text-sm text-content leading-relaxed bg-canvas resize-none focus:outline-none"
+                  style={{ minHeight: 280 }}
+                  placeholder="녹취된 내용이 없습니다"
+                />
+              </div>
+
+              <button
+                onClick={() => generateMinutes(editableTranscript)}
+                disabled={!editableTranscript.trim()}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white
+                           rounded-xl font-medium hover:bg-primary-hover disabled:opacity-40 transition-colors text-sm"
+              >
+                <FileText size={16} />
+                회의록 생성
+              </button>
+            </div>
+          )}
+
+          {isDone && minutes && (
+            /* ── STEP 2: 완료 결과 ── */
+            <div className="space-y-4">
               <div className="flex items-center gap-3 px-5 py-4 bg-success-soft border border-success/20 rounded-2xl">
                 <CheckCircle2 size={20} className="text-success shrink-0" />
                 <div className="flex-1">
-                  <p className="font-semibold text-success">회의가 종료되었습니다</p>
-                  <p className="text-sm text-success/70 mt-0.5">
-                    회의록이 프로젝트 산출물 "AI 요약" 폴더에 저장되었습니다
-                  </p>
+                  <p className="font-semibold text-success">회의록이 생성되었습니다</p>
+                  <p className="text-sm text-success/70 mt-0.5">산출물 "AI 요약" 폴더에 자동 저장되었습니다</p>
                 </div>
-                <button
-                  onClick={downloadMinutes}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-success text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
-                >
-                  <Download size={13} />
-                  다운로드
+                <button onClick={downloadMinutes}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-success text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors">
+                  <Download size={13} /> 다운로드
                 </button>
               </div>
 
-              {/* AI 요약 */}
               {summary && (
                 <div className="border border-line rounded-2xl bg-surface overflow-hidden">
                   <div className="px-5 py-3 border-b border-line">
                     <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">AI 핵심 요약</span>
                   </div>
-                  <div className="p-5 text-sm text-content leading-relaxed whitespace-pre-wrap">
-                    {summary}
-                  </div>
+                  <div className="p-5 text-sm text-content leading-relaxed whitespace-pre-wrap">{summary}</div>
                 </div>
               )}
 
-              {/* 회의록 */}
-              {minutes && (
-                <div className="border border-line rounded-2xl bg-surface overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-line">
-                    <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">회의록</span>
-                    <button onClick={downloadMinutes}
-                      className="text-xs text-primary hover:underline flex items-center gap-1">
-                      <Download size={12} /> 다운로드
-                    </button>
-                  </div>
-                  <div className="p-5 text-sm text-content leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto font-mono">
-                    {minutes}
-                  </div>
+              <div className="border border-line rounded-2xl bg-surface overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-line">
+                  <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">회의록</span>
+                  <button onClick={downloadMinutes} className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <Download size={12} /> 다운로드
+                  </button>
                 </div>
-              )}
-
-              {/* 전체 녹취록 */}
-              {transcript && (
-                <div className="border border-line rounded-2xl bg-surface overflow-hidden">
-                  <div className="px-5 py-3 border-b border-line">
-                    <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">전체 녹취록</span>
-                  </div>
-                  <div className="p-5 text-sm text-content-muted leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
-                    {transcript}
-                  </div>
+                <div className="p-5 text-sm text-content leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto font-mono">
+                  {minutes}
                 </div>
-              )}
+              </div>
 
-              {/* 새 회의 시작 */}
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full py-3 border border-line rounded-xl text-sm text-content-muted hover:text-content hover:bg-surface-hover transition-colors"
-              >
+              <button onClick={() => window.location.reload()}
+                className="w-full py-3 border border-line rounded-xl text-sm text-content-muted hover:text-content hover:bg-surface-hover transition-colors">
                 새 회의 시작
               </button>
             </div>

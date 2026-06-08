@@ -166,25 +166,34 @@ export function useMeeting(projectId: string) {
       .from('meetings').select('transcript').eq('id', sessionIdRef.current).single()
     const fullTranscript = row?.transcript ?? transcript
 
-    if (!fullTranscript.trim()) {
-      await supabase.from('meetings').update({ ended_at: new Date().toISOString() }).eq('id', sessionIdRef.current)
-      setState('done')
-      return
-    }
+    // DB 업데이트 (녹취록만 저장, AI 처리는 사용자가 편집 후 수동 실행)
+    await supabase.from('meetings').update({
+      ended_at:   new Date().toISOString(),
+      transcript: fullTranscript,
+    }).eq('id', sessionIdRef.current)
 
-    // AI 요약
+    // 편집 가능한 상태로 transcript 세팅
+    setTranscript(fullTranscript)
+    setChunkStatus('')
+    setState('done')
+  }, [projectId, transcript, flushChunk])
+
+  /** 편집된 녹취록으로 회의록 생성 (사용자가 편집 후 호출) */
+  const generateMinutes = useCallback(async (editedTranscript: string) => {
+    if (!sessionIdRef.current || !editedTranscript.trim()) return
+    setState('processing')
     setChunkStatus('AI 요약 생성 중...')
+
     let aiSummary = ''
     try {
-      aiSummary = await summarizeMeeting(fullTranscript)
+      aiSummary = await summarizeMeeting(editedTranscript)
       setSummary(aiSummary)
     } catch { aiSummary = '' }
 
-    // 회의록 생성 (녹취 내용만 사용)
     setChunkStatus('회의록 작성 중...')
     let aiMinutes = ''
     try {
-      aiMinutes = await formatMeetingTranscript(fullTranscript, {
+      aiMinutes = await formatMeetingTranscript(editedTranscript, {
         date:      new Date().toLocaleDateString('ko-KR'),
         attendees: session?.attendees ?? '',
         title:     session?.title ?? '회의',
@@ -192,25 +201,21 @@ export function useMeeting(projectId: string) {
       setMinutes(aiMinutes)
     } catch { aiMinutes = '' }
 
-    // DB 업데이트
     await supabase.from('meetings').update({
-      ended_at:  new Date().toISOString(),
-      transcript: fullTranscript,
-      summary:   aiSummary,
+      transcript: editedTranscript,
+      summary:    aiSummary,
     }).eq('id', sessionIdRef.current)
 
-    // 회의록을 프로젝트 산출물로 저장
     if (aiMinutes && session) {
       const { data: { user } } = await supabase.auth.getUser()
       const fileName = `회의록_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '').replace(/ /g, '')}.md`
-      try {
-        await saveMdToProject(aiMinutes, fileName, projectId, user?.id ?? '')
-      } catch { /* 저장 실패 무시 */ }
+      try { await saveMdToProject(aiMinutes, fileName, projectId, user?.id ?? '') }
+      catch { /* 저장 실패 무시 */ }
     }
 
     setChunkStatus('')
     setState('done')
-  }, [projectId, session, transcript, flushChunk])
+  }, [projectId, session])
 
   // 언마운트 시 정리
   useEffect(() => {
@@ -222,10 +227,10 @@ export function useMeeting(projectId: string) {
   }, [])
 
   return {
-    state, session, transcript, summary, minutes,
+    state, session, transcript, setTranscript, summary, minutes,
     elapsed, elapsedFormatted: formatElapsed(elapsed),
     error, chunkStatus,
-    startMeeting, togglePause, endMeeting,
+    startMeeting, togglePause, endMeeting, generateMinutes,
   }
 }
 
