@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { transcribeAudio, summarizeMeeting, formatMeetingTranscript } from '../lib/groq'
+import { summarizeMeeting, formatMeetingTranscript } from '../lib/groq'
 import { saveMdToProject } from '../lib/saveMdToProject'
 
 export type MeetingState = 'idle' | 'recording' | 'paused' | 'processing' | 'done'
@@ -16,20 +16,11 @@ export interface MeetingSession {
   summary?: string
 }
 
-const CHUNK_MS = 30_000 // 30초마다 Whisper 전송
-
-// 브라우저에서 지원하는 MIME 타입 찾기
-function getBestMimeType(): string {
-  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
-  return candidates.find(t => MediaRecorder.isTypeSupported(t)) ?? ''
-}
-
-// 새 MediaRecorder 인스턴스 생성
-function createRecorder(stream: MediaStream, mimeType: string): MediaRecorder {
-  try {
-    return mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
-  } catch {
-    return new MediaRecorder(stream)
+// Web Speech API 타입 선언
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition
+    webkitSpeechRecognition: typeof SpeechRecognition
   }
 }
 
@@ -37,20 +28,17 @@ export function useMeeting(projectId: string) {
   const [state, setState]             = useState<MeetingState>('idle')
   const [session, setSession]         = useState<MeetingSession | null>(null)
   const [transcript, setTranscript]   = useState<string>('')
+  const [interimText, setInterimText] = useState<string>('')  // 실시간 미확정 텍스트
   const [summary, setSummary]         = useState<string>('')
   const [minutes, setMinutes]         = useState<string>('')
   const [elapsed, setElapsed]         = useState(0)
   const [error, setError]             = useState<string>('')
   const [chunkStatus, setChunkStatus] = useState<string>('')
 
-  const allChunksRef    = useRef<Blob[]>([])   // 전체 청크 누적 (헤더 포함)
-  const sentUpToRef     = useRef(0)            // 이미 전송한 청크 인덱스
-  const mimeTypeRef     = useRef<string>('')
-  const recorderRef     = useRef<MediaRecorder | null>(null)
+  const recognitionRef  = useRef<SpeechRecognition | null>(null)
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const chunkTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const sessionIdRef    = useRef<string | null>(null)
-  const streamRef       = useRef<MediaStream | null>(null)
+  const transcriptRef   = useRef<string>('')  // transcript 최신값 동기 참조
   const isActiveRef     = useRef(false)
 
   function formatElapsed(sec: number) {
@@ -62,66 +50,81 @@ export function useMeeting(projectId: string) {
       : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  // 새로 쌓인 청크만 Whisper 전송 (헤더는 항상 첫 번째 청크로 자동 포함)
-  const sendChunks = useCallback(async () => {
-    const all  = allChunksRef.current
-    const from = sentUpToRef.current
-    if (all.length <= from) return  // 새 청크 없음
-
-    const mime  = mimeTypeRef.current || 'audio/webm'
-    // 항상 처음부터 (헤더 포함) 현재까지의 청크로 완전한 파일 생성
-    // → 중복 전송이지만 Whisper는 전체 맥락을 봐서 품질이 더 좋음
-    // → 단, 너무 커지면 최근 구간만 전송
-    const MAX_CHUNKS = 60  // 최대 60초 분량
-    const startIdx   = Math.max(0, all.length - MAX_CHUNKS)
-    const parts      = startIdx === 0
-      ? all.slice(0, all.length)                // 처음부터 — 헤더 자연 포함
-      : [all[0], ...all.slice(startIdx)]        // 헤더(첫청크) + 최근 구간
-    sentUpToRef.current = all.length
-
-    const blob = new Blob(parts, { type: mime })
-    if (blob.size < 500) return
-
-    setChunkStatus(`변환 중... (${(blob.size / 1024).toFixed(0)}KB)`)
-    try {
-      const text = await transcribeAudio(blob)
-      if (text.trim()) {
-        setTranscript(prev => {
-          const next = prev ? `${prev}\n${text}` : text
-          if (sessionIdRef.current) {
-            supabase.from('meetings')
-              .update({ transcript: next })
-              .eq('id', sessionIdRef.current)
-              .then(() => {})
-          }
-          return next
-        })
-      }
-    } catch (err) {
-      setError(`STT 오류: ${(err as Error).message}`)
-    } finally {
-      setChunkStatus('')
+  // transcript 상태 동기 업데이트
+  function appendTranscript(text: string) {
+    transcriptRef.current = transcriptRef.current
+      ? `${transcriptRef.current}\n${text}`
+      : text
+    setTranscript(transcriptRef.current)
+    // DB 저장
+    if (sessionIdRef.current) {
+      supabase.from('meetings')
+        .update({ transcript: transcriptRef.current })
+        .eq('id', sessionIdRef.current)
+        .then(() => {})
     }
-  }, [])
+  }
 
+  // SpeechRecognition 인스턴스 생성 및 이벤트 연결
+  function createRecognition(): SpeechRecognition | null {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) return null
+
+    const rec = new SR()
+    rec.lang             = 'ko-KR'
+    rec.continuous       = true     // 끊기지 않고 계속 인식
+    rec.interimResults   = true     // 실시간 미확정 결과 표시
+    rec.maxAlternatives  = 1
+
+    rec.onresult = (e) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i]
+        if (result.isFinal) {
+          const text = result[0].transcript.trim()
+          if (text) appendTranscript(text)
+          setInterimText('')
+        } else {
+          interim += result[0].transcript
+        }
+      }
+      if (interim) setInterimText(interim)
+    }
+
+    rec.onerror = (e) => {
+      if (e.error === 'no-speech') return       // 무음은 정상, 무시
+      if (e.error === 'aborted')   return       // 수동 중단, 무시
+      setError(`음성 인식 오류: ${e.error}`)
+    }
+
+    // continuous=true여도 브라우저가 끊길 수 있음 → 자동 재시작
+    rec.onend = () => {
+      if (isActiveRef.current && state !== 'paused') {
+        try { rec.start() } catch { /* 이미 시작됨 */ }
+      }
+    }
+
+    return rec
+  }
 
   // 회의 시작
   const startMeeting = useCallback(async (title: string, attendees: string) => {
     setError('')
     setTranscript('')
+    setInterimText('')
     setSummary('')
     setMinutes('')
     setElapsed(0)
+    transcriptRef.current = ''
 
-    let stream: MediaStream
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-    } catch {
-      setError('마이크 권한이 필요합니다. 브라우저 설정에서 마이크를 허용해주세요.')
+    // Web Speech API 지원 확인
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) {
+      setError('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge를 사용해주세요.')
       return
     }
 
+    // DB 레코드 생성
     const { data: { user } } = await supabase.auth.getUser()
     const { data: row } = await supabase.from('meetings').insert([{
       project_id: projectId,
@@ -137,40 +140,32 @@ export function useMeeting(projectId: string) {
       attendees: row.attendees, startedAt: row.started_at, transcript: '',
     })
 
-    const mime = getBestMimeType()
-    mimeTypeRef.current = mime
-    allChunksRef.current = []
-    sentUpToRef.current  = 0
-    isActiveRef.current  = true
+    const rec = createRecognition()
+    if (!rec) { setError('음성 인식 초기화 실패'); return }
 
-    const recorder = createRecorder(stream, mime)
-    recorderRef.current = recorder
+    recognitionRef.current = rec
+    isActiveRef.current    = true
 
-    recorder.onerror = (e: any) => {
-      setError(`녹음 오류: ${e.error?.message ?? '알 수 없는 오류'}`)
-    }
-    recorder.ondataavailable = (e) => {
-      if (e.data?.size > 0) allChunksRef.current.push(e.data)
+    try {
+      rec.start()
+    } catch (e) {
+      setError(`마이크 시작 실패: ${(e as Error).message}`)
+      return
     }
 
-    // 1초마다 청크 수집
-    recorder.start(1000)
     setState('recording')
-
     elapsedTimerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
-    chunkTimerRef.current   = setInterval(sendChunks, CHUNK_MS)
-  }, [projectId, sendChunks])
+  }, [projectId])
 
   // 일시 정지 / 재개
   const togglePause = useCallback(() => {
-    const recorder = recorderRef.current
-    if (!recorder) return
     if (state === 'recording') {
-      if (recorder.state === 'recording') recorder.pause()
+      recognitionRef.current?.stop()
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
       setState('paused')
     } else if (state === 'paused') {
-      if (recorder.state === 'paused') recorder.resume()
+      isActiveRef.current = true
+      try { recognitionRef.current?.start() } catch { /* 이미 시작됨 */ }
       elapsedTimerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
       setState('recording')
     }
@@ -183,22 +178,10 @@ export function useMeeting(projectId: string) {
     isActiveRef.current = false
 
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
-    if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current)
+    recognitionRef.current?.stop()
+    setInterimText('')
 
-    const recorder = recorderRef.current
-    if (recorder && (recorder.state === 'recording' || recorder.state === 'paused')) {
-      await new Promise<void>(resolve => {
-        recorder.onstop = () => resolve()
-        recorder.stop()
-      })
-      await sendChunks()
-    }
-    streamRef.current?.getTracks().forEach(t => t.stop())
-
-    // DB에서 최신 transcript 조회
-    const { data: row } = await supabase
-      .from('meetings').select('transcript').eq('id', sessionIdRef.current).single()
-    const fullTranscript = row?.transcript ?? transcript
+    const fullTranscript = transcriptRef.current
 
     await supabase.from('meetings').update({
       ended_at:   new Date().toISOString(),
@@ -208,9 +191,9 @@ export function useMeeting(projectId: string) {
     setTranscript(fullTranscript)
     setChunkStatus('')
     setState('done')
-  }, [transcript, sendChunks])
+  }, [])
 
-  /** 편집된 녹취록으로 회의록 생성 */
+  // 편집된 녹취록으로 회의록 생성
   const generateMinutes = useCallback(async (editedTranscript: string) => {
     if (!sessionIdRef.current || !editedTranscript.trim()) return
     setState('processing')
@@ -253,13 +236,12 @@ export function useMeeting(projectId: string) {
     return () => {
       isActiveRef.current = false
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
-      if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current)
-      streamRef.current?.getTracks().forEach(t => t.stop())
+      recognitionRef.current?.stop()
     }
   }, [])
 
   return {
-    state, session, transcript, setTranscript, summary, minutes,
+    state, session, transcript, interimText, setTranscript, summary, minutes,
     elapsed, elapsedFormatted: formatElapsed(elapsed),
     error, chunkStatus,
     startMeeting, togglePause, endMeeting, generateMinutes,

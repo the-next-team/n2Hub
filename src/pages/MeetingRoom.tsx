@@ -38,7 +38,7 @@ export default function MeetingRoom() {
     state, transcript, summary, minutes,
     elapsed, elapsedFormatted, error, chunkStatus,
     startMeeting, togglePause, endMeeting, generateMinutes,
-    setTranscript,
+    setTranscript, interimText,
   } = useMeeting(projectId!)
 
   // 편집 가능한 녹취록 (회의 종료 후 수정용)
@@ -314,11 +314,14 @@ export default function MeetingRoom() {
                   ref={transcriptRef}
                   className="p-5 min-h-48 max-h-72 overflow-y-auto text-sm text-content leading-relaxed whitespace-pre-wrap"
                 >
-                  {transcript || (
+                  {transcript && <span>{transcript}</span>}
+                  {/* 실시간 미확정 텍스트 (회색 이탤릭) */}
+                  {interimText && (
+                    <span className="text-content-subtle italic"> {interimText}</span>
+                  )}
+                  {!transcript && !interimText && (
                     <span className="text-content-subtle italic">
-                      {state === 'recording'
-                        ? '말씀하시면 여기에 텍스트로 변환됩니다... (30초마다 업데이트)'
-                        : '일시 정지됨'}
+                      {state === 'recording' ? '말씀하시면 바로 변환됩니다...' : '일시 정지됨'}
                     </span>
                   )}
                 </div>
