@@ -18,6 +18,7 @@ import TemplateManager from './pages/TemplateManager'
 import AISearch from './pages/AISearch'
 import SprintBoard from './pages/SprintBoard'
 import ActionItemBoard from './pages/ActionItemBoard'
+import MeetingRoom from './pages/MeetingRoom'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/projects/:id/ai-search" element={<AISearch />} />
               <Route path="/projects/:id/sprints"      element={<SprintBoard />} />
               <Route path="/projects/:id/action-items" element={<ActionItemBoard />} />
+              <Route path="/projects/:id/meeting" element={<MeetingRoom />} />
               <Route path="/projects/:id/calendar" element={<CalendarView />} />
               <Route path="/projects/:id/activity" element={<ActivityLog />} />
               <Route path="/projects/:id/members" element={<MemberManage />} />

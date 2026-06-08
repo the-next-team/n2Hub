@@ -20,7 +20,7 @@ import {
   PanelLeftClose, PanelLeft, X,
   ChevronRight, ChevronDown, Folder, FolderOpen,
   ClipboardList, Users, Plus, Loader2, BarChart2, AlertCircle, CalendarDays, Activity, SearchCode,
-  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation,
+  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation, Mic,
 } from 'lucide-react'
 
 /* ── 파일 타입별 아이콘 (사이드바용) ── */
@@ -42,6 +42,7 @@ const ALL_NAV_ITEMS: NavItemDef[] = [
   { key: 'documents', icon: FileText,    label: '산출물'       },
   { key: 'tasks',     icon: ClipboardList,label: 'WBS 작업관리' },
   { key: 'action-items', icon: StickyNote, label: '액션 아이템'  },
+  { key: 'meeting',      icon: Mic,        label: '회의'          },
   // { key: 'sprints', icon: CalendarDays, label: '스프린트' }, // 임시 비활성화
   { key: 'gantt',     icon: BarChart2,   label: '간트 차트'    },
   { key: 'ai-search', icon: SearchCode,  label: 'AI 문서 검색' },

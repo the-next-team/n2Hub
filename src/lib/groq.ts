@@ -337,3 +337,32 @@ export async function generateDocumentDraft(
     onChunk,
   )
 }
+
+/** Groq Whisper STT — 오디오 Blob → 텍스트 변환 */
+export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+  if (!GQ_KEY) throw new Error('Groq API 키가 설정되지 않았습니다.')
+  const form = new FormData()
+  const ext  = audioBlob.type.includes('ogg') ? 'ogg' : 'webm'
+  form.append('file', audioBlob, `audio.${ext}`)
+  form.append('model', 'whisper-large-v3-turbo')
+  form.append('language', 'ko')
+  form.append('response_format', 'text')
+  const res = await fetch(`${GQ_BASE}/audio/transcriptions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${GQ_KEY}` },
+    body: form,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message ?? `Whisper 오류 (${res.status})`)
+  }
+  return (await res.text()).trim()
+}
+
+/** 회의 녹취록 → 핵심 요약 (불릿 포인트) */
+export async function summarizeMeeting(transcript: string): Promise<string> {
+  return chat(
+    `다음은 회의 녹취록입니다. 핵심 논의 내용을 불릿 포인트로 간결하게 요약해주세요.\n\n` +
+    `[녹취록]\n${transcript.slice(0, 12000)}`
+  )
+}
