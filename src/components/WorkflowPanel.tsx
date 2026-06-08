@@ -120,7 +120,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">문서 워크플로우</span>
             <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLOR[currentStatus]}`}>
-              {currentStatus} {currentVersion}
+              {currentStatus}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -173,9 +173,6 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
                     current ? 'text-primary font-semibold' :
                     done    ? 'text-success' : 'text-content-subtle'
                   }`}>{step.label}</span>
-                  <span className={`text-[9px] ${current ? 'text-primary/70' : 'text-content-subtle'}`}>
-                    {step.version}
-                  </span>
                 </div>
                 {idx < WORKFLOW_STEPS.length - 1 && (
                   <ChevronRight size={12} className={`shrink-0 mb-3 ${done ? 'text-success' : 'text-line'}`} />
@@ -251,19 +248,17 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             {/* 단계별 설명 */}
             <div className="space-y-1.5">
               {[
-                { step: '최초생성', ver: 'v0.1', desc: '파일 업로드 직후 초기 상태', who: '자동 부여' },
-                { step: '작성중',   ver: 'v0.5', desc: '담당자가 내용 작성 중',      who: '모든 멤버' },
-                { step: '검토중',   ver: 'v0.6', desc: '검토자 확인 단계',           who: '모든 멤버' },
-                { step: '승인완료', ver: 'v0.7', desc: 'PM/PL이 최종 승인',          who: 'PM · PL만' },
-                { step: '완료',     ver: 'v1.0', desc: '최종 확정 산출물',            who: 'PM · PL만' },
-              ].map(({ step, ver, desc, who }) => (
+                { step: '최초생성', desc: '파일 업로드 직후 초기 상태', who: '자동 부여' },
+                { step: '작성중',   desc: '담당자가 내용 작성 중',      who: '모든 멤버' },
+                { step: '검토중',   desc: '검토자 확인 단계',           who: '모든 멤버' },
+                { step: '승인완료', desc: 'PM/PL이 최종 승인',          who: 'PM · PL만' },
+                { step: '완료',     desc: '최종 확정 산출물',            who: 'PM · PL만' },
+              ].map(({ step, desc, who }) => (
                 <div key={step} className="flex items-start gap-2">
                   <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium border ${STATUS_COLOR[step as WorkflowStatus]}`}>
-                    {ver}
+                    {step}
                   </span>
                   <div className="min-w-0">
-                    <span className="font-medium text-content">{step}</span>
-                    <span className="text-content-muted mx-1">—</span>
                     <span className="text-content-muted">{desc}</span>
                     <span className="ml-1 text-content-subtle">({who})</span>
                   </div>
@@ -274,9 +269,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             {/* 규칙 안내 */}
             <div className="pt-1.5 border-t border-primary/15 space-y-1 text-content-muted">
               <p><span className="font-medium text-content">전환 사유</span> — 단계 이동 시 사유 입력 필수</p>
-              <p><span className="font-medium text-content">파일명 자동 변경</span> — 전환 시 파일명에 버전 자동 반영<br />
-                <span className="text-content-subtle pl-2">예: 사업수행계획서_v0.6.docx</span>
-              </p>
+              <p><span className="font-medium text-content">파일명 자동 변경</span> — 단계 전환 시 파일명이 자동으로 업데이트됩니다</p>
               <p><span className="font-medium text-content">이전 버전 보관</span> — 전환마다 old/ 폴더에 자동 저장</p>
               <p><span className="font-medium text-content">새 파일 업로드</span> — 전환 시 수정본을 첨부하면 파일 교체</p>
             </div>
@@ -293,8 +286,8 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs text-content-muted">
-                <span>다음:</span>
-                <span className="font-medium text-content">{nextStep.label} ({nextStep.version})</span>
+                <span>다음 단계:</span>
+                <span className="font-medium text-content">{nextStep.label}</span>
               </div>
             )}
             <button
@@ -334,7 +327,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
                 <FileText size={12} className="text-content-subtle shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-content-muted truncate block">{v.originalName}</span>
-                  <span className="text-content-subtle">{v.workflowVersion} · {v.workflowStatus}</span>
+                  <span className="text-content-subtle">{v.workflowStatus}</span>
                 </div>
                 <ExternalLink size={11} className="text-content-subtle opacity-0 group-hover:opacity-100 shrink-0" />
               </div>
@@ -354,7 +347,6 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
                   <span className="text-content-muted">{h.authorEmail ?? h.changedBy}</span>
                   <span className="mx-1 text-content-subtle">·</span>
                   <span className="text-content">{h.fromStatus ?? '—'} → {h.toStatus}</span>
-                  <span className="ml-1 text-content-subtle">({h.toVersion})</span>
                   {(h as any).newFileId && (
                     <span className="ml-1 px-1 py-0.5 bg-primary-soft text-primary rounded text-[10px]">새 파일</span>
                   )}
@@ -378,7 +370,6 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
               <span className="font-medium text-content">{currentStatus}</span>
               <span className="mx-2">→</span>
               <span className="font-medium text-content">{nextStep.label}</span>
-              <span className="ml-2 text-xs text-content-subtle">({currentVersion} → {nextStep.version})</span>
             </p>
 
             {/* 전환 사유 */}
