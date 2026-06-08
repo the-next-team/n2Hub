@@ -1,9 +1,54 @@
 import { useRef, useState } from 'react'
-import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History, Upload, FileText, GitBranch, ExternalLink, HelpCircle, X } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History, Upload, FileText, GitBranch, ExternalLink, HelpCircle, X, Info, ArrowRight, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { WorkflowStatus } from '../types'
 import { WORKFLOW_STEPS, WORKFLOW_REQUIRES_APPROVAL } from '../types'
 import { useWorkflow } from '../hooks/useWorkflow'
+
+// 상태별 상황 안내 메시지
+const STATUS_GUIDE: Record<WorkflowStatus, {
+  message: string
+  action: string
+  hint: string
+  who: string
+  canAct: (role?: string) => boolean
+}> = {
+  '최초생성': {
+    message: '문서가 등록되었습니다.',
+    action: '내용을 작성한 뒤 "작성중"으로 전환하세요.',
+    hint: '전환 버튼을 눌러 검토 흐름을 시작할 수 있습니다.',
+    who: '담당자',
+    canAct: () => true,
+  },
+  '작성중': {
+    message: '문서 작성이 진행 중입니다.',
+    action: '작성이 끝나면 "검토중"으로 전환하여 검토를 요청하세요.',
+    hint: '수정본이 있다면 전환 시 새 파일을 첨부하면 자동으로 교체됩니다.',
+    who: '담당자',
+    canAct: () => true,
+  },
+  '검토중': {
+    message: '검토 중인 문서입니다.',
+    action: 'PM 또는 PL이 검토 후 "승인완료"로 처리해야 합니다.',
+    hint: '검토자가 의견을 남길 때는 아래 댓글을 활용하세요.',
+    who: 'PM · PL',
+    canAct: (role) => role === 'pm' || role === 'pl',
+  },
+  '승인완료': {
+    message: 'PM/PL 승인이 완료된 문서입니다.',
+    action: '최종 확정 후 "완료"로 전환하세요.',
+    hint: '완료 전환 후에는 v1.0으로 확정되며 이전 버전은 old/ 폴더에 보관됩니다.',
+    who: 'PM · PL',
+    canAct: (role) => role === 'pm' || role === 'pl',
+  },
+  '완료': {
+    message: '최종 완료된 산출물입니다.',
+    action: '이 문서는 v1.0으로 확정되었습니다.',
+    hint: '이전 버전은 old/ 폴더에서 확인할 수 있습니다.',
+    who: '',
+    canAct: () => false,
+  },
+}
 
 const STATUS_COLOR: Record<WorkflowStatus, string> = {
   '최초생성': 'bg-surface-hover text-content-muted border-line',
@@ -139,6 +184,59 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             )
           })}
         </div>
+
+        {/* ── 상황별 안내 카드 (항상 표시) ── */}
+        {(() => {
+          const guide = STATUS_GUIDE[currentStatus]
+          const myTurn = guide.canAct(userRole)
+          if (isComplete) return (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success-soft border border-success/20 text-xs text-success">
+              <CheckCircle2 size={13} className="shrink-0" />
+              <span>{guide.action}</span>
+            </div>
+          )
+          return (
+            <div className={`rounded-lg border text-xs space-y-1.5 px-3 py-2.5 ${
+              myTurn
+                ? 'bg-primary-soft/40 border-primary/20'
+                : 'bg-surface-hover border-line'
+            }`}>
+              {/* 현재 상태 설명 */}
+              <div className="flex items-start gap-1.5">
+                <Info size={12} className={`mt-0.5 shrink-0 ${myTurn ? 'text-primary' : 'text-content-subtle'}`} />
+                <div className="space-y-0.5">
+                  <p className={`font-medium ${myTurn ? 'text-primary' : 'text-content-muted'}`}>
+                    {guide.message}
+                  </p>
+                  <p className="text-content-muted leading-relaxed">{guide.action}</p>
+                </div>
+              </div>
+              {/* 담당자 표시 */}
+              {guide.who && (
+                <div className="flex items-center gap-1.5 pt-1 border-t border-line/60">
+                  <UserCheck size={11} className="text-content-subtle shrink-0" />
+                  <span className="text-content-subtle">
+                    다음 전환 담당:
+                    <span className={`ml-1 font-medium ${myTurn ? 'text-primary' : 'text-content-muted'}`}>
+                      {guide.who}
+                    </span>
+                    {myTurn && <span className="ml-1 text-primary font-medium">(나)</span>}
+                  </span>
+                  {myTurn && nextStep && (
+                    <span className="ml-auto flex items-center gap-0.5 text-primary animate-pulse font-medium">
+                      <ArrowRight size={11} />
+                      전환 가능
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* 힌트 */}
+              <p className="text-content-subtle text-[11px] leading-relaxed border-t border-line/60 pt-1">
+                {guide.hint}
+              </p>
+            </div>
+          )
+        })()}
 
         {/* 도움말 패널 */}
         {showHelp && (
