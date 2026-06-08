@@ -16,11 +16,30 @@ export interface MeetingSession {
   summary?: string
 }
 
-// Web Speech API 타입 선언
+// Web Speech API 타입 선언 (브라우저 벤더 접두어 포함)
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number
+  results: SpeechRecognitionResultList
+}
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string
+}
+interface SpeechRecognition extends EventTarget {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  start(): void
+  stop(): void
+  abort(): void
+  onresult: ((e: SpeechRecognitionEvent) => void) | null
+  onerror:  ((e: SpeechRecognitionErrorEvent) => void) | null
+  onend:    (() => void) | null
+}
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition
-    webkitSpeechRecognition: typeof SpeechRecognition
+    SpeechRecognition: new () => SpeechRecognition
+    webkitSpeechRecognition: new () => SpeechRecognition
   }
 }
 

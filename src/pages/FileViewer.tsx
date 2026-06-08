@@ -967,7 +967,7 @@ export default function FileViewer() {
 
         {/* PDF */}
         {fileType === 'pdf' && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface shrink-0">
               <span className="text-sm font-medium text-content truncate">{meta.original_name}</span>
               <Button variant="secondary" size="sm" onClick={handleDownload}>
@@ -994,7 +994,7 @@ export default function FileViewer() {
 
         {/* 기타 */}
         {fileType === 'other' && (
-          <div className="flex flex-col h-full items-center justify-center gap-4 text-content-muted">
+          <div className="flex flex-col flex-1 min-w-0 items-center justify-center gap-4 text-content-muted">
             <p className="text-sm">이 파일 형식은 브라우저에서 미리볼 수 없습니다.</p>
             <Button onClick={handleDownload}>
               <Download size={14} />
