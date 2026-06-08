@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History, Upload, FileText, GitBranch, ExternalLink } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Clock, Lock, AlertCircle, History, Upload, FileText, GitBranch, ExternalLink, HelpCircle, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { WorkflowStatus } from '../types'
 import { WORKFLOW_STEPS, WORKFLOW_REQUIRES_APPROVAL } from '../types'
@@ -30,6 +30,7 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
   const [showModal, setShowModal]         = useState(false)
   const [showHistory, setShowHistory]     = useState(false)
   const [showVersions, setShowVersions]   = useState(false)
+  const [showHelp, setShowHelp]           = useState(false)
   const [comment, setComment]             = useState('')
   const [commentError, setCommentError]   = useState('')
   const [newFile, setNewFile]             = useState<File | null>(null)
@@ -78,6 +79,17 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              title="사용 방법 보기"
+              className={`flex items-center gap-0.5 text-xs rounded-md px-1.5 py-0.5 transition-colors ${
+                showHelp
+                  ? 'bg-primary-soft text-primary'
+                  : 'text-content-subtle hover:text-content'
+              }`}
+            >
+              <HelpCircle size={13} />
+            </button>
             {otherVersions.length > 0 && (
               <button
                 onClick={() => setShowVersions(!showVersions)}
@@ -127,6 +139,51 @@ export default function WorkflowPanel({ fileId, projectId, userRole, onTransitio
             )
           })}
         </div>
+
+        {/* 도움말 패널 */}
+        {showHelp && (
+          <div className="rounded-xl bg-primary-soft/60 border border-primary/20 p-3 space-y-2.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-primary">워크플로우 사용 방법</span>
+              <button onClick={() => setShowHelp(false)} className="text-primary/50 hover:text-primary">
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* 단계별 설명 */}
+            <div className="space-y-1.5">
+              {[
+                { step: '최초생성', ver: 'v0.1', desc: '파일 업로드 직후 초기 상태', who: '자동 부여' },
+                { step: '작성중',   ver: 'v0.5', desc: '담당자가 내용 작성 중',      who: '모든 멤버' },
+                { step: '검토중',   ver: 'v0.6', desc: '검토자 확인 단계',           who: '모든 멤버' },
+                { step: '승인완료', ver: 'v0.7', desc: 'PM/PL이 최종 승인',          who: 'PM · PL만' },
+                { step: '완료',     ver: 'v1.0', desc: '최종 확정 산출물',            who: 'PM · PL만' },
+              ].map(({ step, ver, desc, who }) => (
+                <div key={step} className="flex items-start gap-2">
+                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium border ${STATUS_COLOR[step as WorkflowStatus]}`}>
+                    {ver}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="font-medium text-content">{step}</span>
+                    <span className="text-content-muted mx-1">—</span>
+                    <span className="text-content-muted">{desc}</span>
+                    <span className="ml-1 text-content-subtle">({who})</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 규칙 안내 */}
+            <div className="pt-1.5 border-t border-primary/15 space-y-1 text-content-muted">
+              <p><span className="font-medium text-content">전환 사유</span> — 단계 이동 시 사유 입력 필수</p>
+              <p><span className="font-medium text-content">파일명 자동 변경</span> — 전환 시 파일명에 버전 자동 반영<br />
+                <span className="text-content-subtle pl-2">예: 사업수행계획서_v0.6.docx</span>
+              </p>
+              <p><span className="font-medium text-content">이전 버전 보관</span> — 전환마다 old/ 폴더에 자동 저장</p>
+              <p><span className="font-medium text-content">새 파일 업로드</span> — 전환 시 수정본을 첨부하면 파일 교체</p>
+            </div>
+          </div>
+        )}
 
         {/* 전환 버튼 */}
         {!isComplete && nextStep && (
