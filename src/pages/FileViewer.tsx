@@ -7,7 +7,7 @@ import { Button } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { useAuth } from '../lib/auth'
 import CoverPage, { type CoverMeta } from '../components/CoverPage'
-import { summarizeDocument, askQuestion, convertToMarkdown, chatSimple } from '../lib/groq'
+import { summarizeDocument, askQuestion, convertToMarkdown } from '../lib/groq'
 import { saveMdToProject } from '../lib/saveMdToProject'
 import { useRegisterFileSession } from '../hooks/useFileSession'
 import WorkflowPanel from '../components/WorkflowPanel'
@@ -156,9 +156,6 @@ export default function FileViewer() {
   const [showInfoPanel, setShowInfoPanel] = useState(false)
   const [userRole, setUserRole]           = useState<string>('')
   const { totalCount: commentCount }      = useDocumentComments(fileId ?? null, projectId ?? null)
-  // AI 버전 요약
-  const [versionSummary, setVersionSummary]         = useState('')
-  const [generatingVersionSummary, setGeneratingVersionSummary] = useState(false)
 
   // AI 요약
   const [showSummary, setShowSummary]       = useState(false)
@@ -315,37 +312,6 @@ export default function FileViewer() {
   }, [projectId, user?.id])
 
   // AI 버전 변경 요약
-  async function handleVersionSummary() {
-    if (!meta || !fileId) return
-    setGeneratingVersionSummary(true)
-    setVersionSummary('')
-    try {
-      // 워크플로우 이력 조회
-      const { data: hist } = await supabase
-        .from('workflow_history')
-        .select('from_status, to_status, from_version, to_version, comment, changed_at')
-        .eq('file_id', fileId)
-        .order('changed_at', { ascending: true })
-
-      if (!hist?.length) {
-        setVersionSummary('아직 버전 변경 이력이 없습니다.')
-        return
-      }
-
-      const historyText = hist.map((h: any) =>
-        `• ${h.from_version ?? '최초'} → ${h.to_version} (${h.from_status ?? '최초생성'} → ${h.to_status}): ${h.comment ?? '코멘트 없음'} [${new Date(h.changed_at).toLocaleDateString('ko-KR')}]`
-      ).join('\n')
-
-      const prompt = `다음은 "${meta.original_name}" 문서의 버전 변경 이력입니다:\n\n${historyText}\n\n이 변경 이력을 바탕으로 문서가 어떻게 발전했는지 간략히 요약해주세요. 한국어로 3-5문장 이내로 작성해주세요.`
-      const summary = await chatSimple(prompt)
-      setVersionSummary(summary)
-    } catch (err) {
-      setVersionSummary(`오류: ${(err as Error).message}`)
-    } finally {
-      setGeneratingVersionSummary(false)
-    }
-  }
-
   // OnlyOffice 닫기 → 산출물 목록으로 이동
   const handleOOClose = useCallback(() => {
     navigate(`/projects/${projectId}/documents`)
@@ -1005,27 +971,6 @@ export default function FileViewer() {
                   if (data) setMeta(prev => prev ? { ...prev, original_name: data.original_name, storage_path: data.storage_path } : prev)
                 }}
               />
-              {/* AI 버전 요약 */}
-              <div className="border border-line rounded-xl bg-surface p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-content-muted uppercase tracking-wider">AI 버전 요약</span>
-                  <button
-                    onClick={handleVersionSummary}
-                    disabled={generatingVersionSummary}
-                    className="text-xs px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-40 flex items-center gap-1 dark:bg-purple-900/20 dark:text-purple-300"
-                  >
-                    {generatingVersionSummary
-                      ? <><Loader2 size={11} className="animate-spin" /> 분석 중...</>
-                      : <><Sparkles size={11} /> 요약 생성</>}
-                  </button>
-                </div>
-                {versionSummary && (
-                  <p className="text-xs text-content leading-relaxed">{versionSummary}</p>
-                )}
-                {!versionSummary && !generatingVersionSummary && (
-                  <p className="text-xs text-content-subtle">버전 이력을 AI가 요약합니다</p>
-                )}
-              </div>
               {/* 댓글 */}
               <CommentPanel
                 fileId={meta.id}
