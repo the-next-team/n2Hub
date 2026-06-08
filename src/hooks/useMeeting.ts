@@ -44,12 +44,14 @@ export function useMeeting(projectId: string) {
   const [chunkStatus, setChunkStatus] = useState<string>('')
 
   const chunksRef       = useRef<Blob[]>([])
+  const headerChunkRef  = useRef<Blob | null>(null)  // WebM 헤더 청크 보존
   const mimeTypeRef     = useRef<string>('')
+  const recorderRef     = useRef<MediaRecorder | null>(null)
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const cycleTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const chunkTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const sessionIdRef    = useRef<string | null>(null)
   const streamRef       = useRef<MediaStream | null>(null)
-  const isActiveRef     = useRef(false)   // 녹음 진행 중 여부
+  const isActiveRef     = useRef(false)
 
   function formatElapsed(sec: number) {
     const h = Math.floor(sec / 3600)
@@ -60,13 +62,20 @@ export function useMeeting(projectId: string) {
       : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  // 현재 청크 블롭 → Whisper 전송
+  // 현재 청크 → 헤더 보존 방식으로 완전한 파일 생성 후 Whisper 전송
   const sendChunks = useCallback(async () => {
     if (!chunksRef.current.length) return
-    const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current || 'audio/webm' })
-    chunksRef.current = []
+    const mime = mimeTypeRef.current || 'audio/webm'
 
-    if (blob.size < 500) return   // 너무 작으면 무음으로 간주
+    // 헤더 청크를 앞에 붙여서 완전한 파일 생성
+    const parts = headerChunkRef.current
+      ? [headerChunkRef.current, ...chunksRef.current]
+      : [...chunksRef.current]
+
+    chunksRef.current = []  // 누적 청크 초기화 (헤더는 유지)
+
+    const blob = new Blob(parts, { type: mime })
+    if (blob.size < 500) return
 
     setChunkStatus(`변환 중... (${(blob.size / 1024).toFixed(0)}KB)`)
     try {
@@ -90,42 +99,6 @@ export function useMeeting(projectId: string) {
     }
   }, [])
 
-  // ── recorder 1회 사이클: start → 30초 → stop → flush → 새 recorder 시작 ──
-  // 각 사이클마다 새 recorder를 만들어 WebM 헤더가 항상 포함된 완전한 파일 생성
-  const startCycle = useCallback(() => {
-    const stream = streamRef.current
-    if (!stream || !isActiveRef.current) return
-
-    const mime     = mimeTypeRef.current
-    const recorder = createRecorder(stream, mime)
-
-    recorder.onerror = (e: any) => {
-      setError(`녹음 오류: ${e.error?.message ?? '알 수 없는 오류'}`)
-    }
-    recorder.ondataavailable = (e) => {
-      if (e.data?.size > 0) chunksRef.current.push(e.data)
-    }
-
-    // 30초 후 자동 정지 → flush → 다음 사이클
-    recorder.onstop = async () => {
-      await sendChunks()
-      if (isActiveRef.current) startCycle()  // 재귀적으로 다음 사이클 시작
-    }
-
-    // 1초마다 ondataavailable (헤더 포함한 작은 청크 수집)
-    recorder.start(1000)
-
-    // 30초 후 stop (onstop이 flush + 재시작 담당)
-    const timer = setTimeout(() => {
-      if (recorder.state === 'recording' || recorder.state === 'paused') {
-        recorder.stop()
-      }
-    }, CHUNK_MS)
-
-    // 외부에서 참조할 수 있게 저장
-    ;(recorder as any)._cycleTimer = timer
-    ;(window as any).__currentRecorder = recorder
-  }, [sendChunks])
 
   // 회의 시작
   const startMeeting = useCallback(async (title: string, attendees: string) => {
@@ -159,22 +132,43 @@ export function useMeeting(projectId: string) {
       attendees: row.attendees, startedAt: row.started_at, transcript: '',
     })
 
-    mimeTypeRef.current = getBestMimeType()
+    const mime = getBestMimeType()
+    mimeTypeRef.current = mime
+    headerChunkRef.current = null
     isActiveRef.current = true
+
+    const recorder = createRecorder(stream, mime)
+    recorderRef.current = recorder
+
+    recorder.onerror = (e: any) => {
+      setError(`녹음 오류: ${e.error?.message ?? '알 수 없는 오류'}`)
+    }
+
+    let isFirstChunk = true
+    recorder.ondataavailable = (e) => {
+      if (!e.data?.size) return
+      if (isFirstChunk) {
+        // 첫 청크 = WebM 헤더 포함 → 별도 보존
+        headerChunkRef.current = e.data
+        isFirstChunk = false
+      } else {
+        chunksRef.current.push(e.data)
+      }
+    }
+
+    // 1초마다 데이터 수집
+    recorder.start(1000)
     setState('recording')
 
-    // 경과 타이머
     elapsedTimerRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
-
-    // 첫 사이클 시작
-    startCycle()
-  }, [projectId, startCycle])
+    // 30초마다 Whisper 전송 (recorder 재시작 없이)
+    chunkTimerRef.current = setInterval(sendChunks, CHUNK_MS)
+  }, [projectId, sendChunks])
 
   // 일시 정지 / 재개
   const togglePause = useCallback(() => {
-    const recorder = (window as any).__currentRecorder as MediaRecorder | undefined
+    const recorder = recorderRef.current
     if (!recorder) return
-
     if (state === 'recording') {
       if (recorder.state === 'recording') recorder.pause()
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
@@ -193,21 +187,17 @@ export function useMeeting(projectId: string) {
     isActiveRef.current = false
 
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
-    if (cycleTimerRef.current)   clearInterval(cycleTimerRef.current)
+    if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current)
 
-    // 현재 진행 중인 recorder 강제 종료
-    const recorder = (window as any).__currentRecorder as MediaRecorder | undefined
+    const recorder = recorderRef.current
     if (recorder && (recorder.state === 'recording' || recorder.state === 'paused')) {
-      clearTimeout((recorder as any)._cycleTimer)
       await new Promise<void>(resolve => {
         recorder.onstop = () => resolve()
         recorder.stop()
       })
       await sendChunks()
     }
-
     streamRef.current?.getTracks().forEach(t => t.stop())
-    ;(window as any).__currentRecorder = null
 
     // DB에서 최신 transcript 조회
     const { data: row } = await supabase
@@ -267,7 +257,7 @@ export function useMeeting(projectId: string) {
     return () => {
       isActiveRef.current = false
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
-      if (cycleTimerRef.current)   clearInterval(cycleTimerRef.current)
+      if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current)
       streamRef.current?.getTracks().forEach(t => t.stop())
     }
   }, [])
