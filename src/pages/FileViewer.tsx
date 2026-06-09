@@ -118,7 +118,7 @@ function parseCoverMeta(filename: string): Pick<CoverMeta, 'code' | 'title' | 'v
 }
 
 // OnlyOffice 지원 확장자 목록 (txt/md 제외 → 별도 마크다운 뷰어로 처리)
-const OO_DOCX_EXTS  = new Set(['docx','doc','docm','odt','fodt','ott','rtf','html','htm','mht','mhtml','xml','epub','fb2','mobi'])
+const OO_DOCX_EXTS  = new Set(['docx','doc','docm','odt','fodt','ott','rtf','html','htm','mht','mhtml','xml','epub','fb2','mobi','hwp','hwpx'])
 const OO_XLSX_EXTS  = new Set(['xlsx','xls','xlsm','xlsb','ods','fods','ots','csv'])
 const OO_PPTX_EXTS  = new Set(['pptx','ppt','pptm','odp','fodp','otp','ppsx','pps'])
 const OO_PDF_VIEWER = new Set(['pdf','djvu','xps','oxps'])
@@ -717,6 +717,8 @@ export default function FileViewer() {
   }
 
   const fileType = getFileType(meta.original_name, meta.mime_type)
+  const fileExt  = meta.original_name.split('.').pop()?.toLowerCase() ?? ''
+  const isHwp    = fileExt === 'hwp' || fileExt === 'hwpx'   // HWP: 미리보기만, mammoth 불가
   const coverMeta: CoverMeta = {
     ...parseCoverMeta(meta.original_name),
     projectName,
@@ -738,7 +740,7 @@ export default function FileViewer() {
         <ChevronRight size={12} />
         <span className="text-content font-medium truncate max-w-xs">{meta.original_name}</span>
         <div className="ml-auto flex items-center gap-2">
-          {(fileType === 'docx' || fileType === 'xlsx') && (
+          {(fileType === 'docx' || fileType === 'xlsx') && !isHwp && (
             <button
               onClick={handlePrintWithCover}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-line hover:border-primary/40 hover:bg-primary-soft text-content-muted hover:text-primary transition-colors"
@@ -756,8 +758,8 @@ export default function FileViewer() {
               <span>표지 시트 추가</span>
             </button>
           )}
-          {/* MD 변환: xlsx / docx 지원 */}
-          {(fileType === 'xlsx' || fileType === 'docx') && (
+          {/* MD 변환: xlsx / docx 지원 (HWP 제외 — mammoth 미지원) */}
+          {(fileType === 'xlsx' || fileType === 'docx') && !isHwp && (
             <button
               onClick={handleConvertToMd}
               disabled={isConverting}
@@ -768,8 +770,8 @@ export default function FileViewer() {
             </button>
           )}
 
-          {/* AI 요약 / AI Q&A: docx / xlsx / md 지원 */}
-          {(fileType === 'docx' || fileType === 'xlsx' || fileType === 'md') && (
+          {/* AI 요약 / AI Q&A: docx / xlsx / md 지원 (HWP 제외) */}
+          {(fileType === 'docx' || fileType === 'xlsx' || fileType === 'md') && !isHwp && (
             <>
               <button
                 onClick={handleAISummary}
