@@ -4,12 +4,14 @@ const OR_BASE  = 'https://openrouter.ai/api/v1'
 const OR_MODEL = 'moonshotai/kimi-k2.6:free'
 const OR_EXTRA = { 'HTTP-Referer': 'https://n2hub.app', 'X-Title': 'n2Hub' }
 
-// ── Fallback: Groq Qwen ───────────────────────────────────────────────────
+// ── Fallback: Groq ────────────────────────────────────────────────────────
+// llama-3.1-8b-instant: 20,000 TPM (qwen3-32b는 6,000 TPM 한도로 대용량 문서 처리 불가)
 const GQ_KEY   = import.meta.env.VITE_GROQ_API_KEY as string | undefined
 const GQ_BASE  = 'https://api.groq.com/openai/v1'
-const GQ_MODEL = 'qwen/qwen3-32b'
+const GQ_MODEL = 'llama-3.1-8b-instant'
 
-const MAX_CHARS = 30000
+const MAX_CHARS      = 30000   // Primary(KIMI) 한도
+const MAX_CHARS_GROQ = 12000   // Groq 폴백 한도 (6000 TPM 버퍼 확보)
 
 // fallback 전환이 필요한 HTTP 상태 코드
 const FALLBACK_CODES = new Set([404, 422, 503, 529])
@@ -88,31 +90,38 @@ async function chat(userMessage: string, maxTokens = 1024): Promise<string> {
       const data = await res.json()
 
       if (res.status === 429) {
-        // Rate limit → Groq fallback 으로 바로 전환 (upstream rate limit은 재시도해도 동일)
-        console.warn('[AI] KIMI rate-limited → Qwen fallback')
+        console.warn('[AI] KIMI rate-limited → Groq fallback')
         throw new Error('rate_limited')
       }
 
       if (res.ok) return cleanOutput(data.choices?.[0]?.message?.content ?? '')
 
-      // fallback 전환 조건 (404, 422, 503 등)
       if (!FALLBACK_CODES.has(res.status)) throw new Error(data.error?.message ?? `오류 (${res.status})`)
-      console.warn(`[AI] KIMI 실패(${res.status}) → Qwen fallback`)
+      console.warn(`[AI] KIMI 실패(${res.status}) → Groq fallback`)
     } catch (err) {
       if (!GQ_KEY) throw err
-      console.warn('[AI] KIMI 오류 → Qwen fallback:', (err as Error).message)
+      console.warn('[AI] KIMI 오류 → Groq fallback:', (err as Error).message)
     }
   }
 
-  // 2️⃣ Fallback: Groq Qwen
+  // 2️⃣ Fallback: Groq (llama-3.1-8b-instant, 20,000 TPM)
+  // 메시지가 너무 길면 Groq TPM 한도 초과 → MAX_CHARS_GROQ로 잘라서 재구성
   if (!GQ_KEY) throw new Error('사용 가능한 AI API 키가 없습니다.')
-  const res  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, msgs, maxTokens)
+  const groqMsg = userMessage.length > MAX_CHARS_GROQ
+    ? [
+        { role: 'system', content: SYSTEM },
+        { role: 'user',   content: userMessage.slice(0, MAX_CHARS_GROQ) + '\n\n(내용이 길어 일부만 분석합니다)' },
+      ]
+    : msgs
+  const groqMaxTokens = Math.min(maxTokens, 1500)  // Groq 응답도 제한
+
+  const res  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, groqMsg, groqMaxTokens)
   const data = await res.json()
 
   if (res.status === 429) {
     const wait = (/in (\d+\.?\d*)s/.exec(data.error?.message ?? '')?.[1] ?? '8')
     await new Promise(r => setTimeout(r, parseFloat(wait) * 1000 + 500))
-    const res2  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, msgs, maxTokens)
+    const res2  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, groqMsg, groqMaxTokens)
     const data2 = await res2.json()
     if (res2.ok) return cleanOutput(data2.choices?.[0]?.message?.content ?? '')
   }
