@@ -13,8 +13,9 @@ const GQ_MODEL = 'llama-3.1-8b-instant'
 const MAX_CHARS      = 30000  // Primary(KIMI) 한도
 // Groq 무료 온디맨드: 모델 무관 6,000 TPM
 // 한글 1자 ≈ 0.4 토큰 → 7,000자 × 0.4 = 2,800 + 시스템(100) + 응답(800) = 3,700 토큰 (안전)
-const MAX_CHARS_GROQ = 7000
-const MAX_TOKENS_GROQ = 800
+const MAX_CHARS_GROQ = 7000   // chat() userMessage 최대 길이
+const MAX_TOKENS_GROQ = 800   // Groq 응답 최대 토큰
+// askQuestion() Groq fallback: 문서 3,000자 (=1,200 토큰) + 히스토리 2턴 + 응답 800 = ~2,400 토큰 (안전)
 
 // fallback 전환이 필요한 HTTP 상태 코드
 const FALLBACK_CODES = new Set([404, 422, 503, 529])
@@ -223,9 +224,17 @@ export async function askQuestion(
       if (!FALLBACK_CODES.has(res.status)) throw new Error(data.error?.message)
     } catch (err) { if (!GQ_KEY) throw err }
   }
-  // Fallback: Qwen
+  // Fallback: Groq — Groq 무료 6,000 TPM 한도 → 문서 3,000자 + 히스토리 2턴으로 제한
   if (!GQ_KEY) throw new Error('사용 가능한 API 키가 없습니다.')
-  const res  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, msgs, 800)
+  const GROQ_DOC_CHARS = 3000
+  const sysGroq =
+    `${SYSTEM}\n\n` +
+    `당신은 "${docName}" 문서를 기반으로 질문에 답하는 전문 어시스턴트입니다.\n` +
+    `문서에 없는 내용은 "문서에서 확인할 수 없습니다"라고 답하세요.\n\n` +
+    `[문서 내용 (일부)]\n${docContent.slice(0, GROQ_DOC_CHARS)}`
+  const recentHistory = history.slice(-4)  // 최근 2턴(Q+A × 2)만 포함
+  const groqMsgs = [{ role: 'system', content: sysGroq }, ...recentHistory, { role: 'user', content: question }]
+  const res  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, groqMsgs, MAX_TOKENS_GROQ)
   const data = await res.json()
   if (!res.ok) throw new Error(data.error?.message ?? `오류 (${res.status})`)
   return cleanOutput(data.choices?.[0]?.message?.content ?? '')
