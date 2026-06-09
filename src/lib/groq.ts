@@ -10,8 +10,11 @@ const GQ_KEY   = import.meta.env.VITE_GROQ_API_KEY as string | undefined
 const GQ_BASE  = 'https://api.groq.com/openai/v1'
 const GQ_MODEL = 'llama-3.1-8b-instant'
 
-const MAX_CHARS      = 30000   // Primary(KIMI) 한도
-const MAX_CHARS_GROQ = 12000   // Groq 폴백 한도 (6000 TPM 버퍼 확보)
+const MAX_CHARS      = 30000  // Primary(KIMI) 한도
+// Groq 무료 온디맨드: 모델 무관 6,000 TPM
+// 한글 1자 ≈ 0.4 토큰 → 7,000자 × 0.4 = 2,800 + 시스템(100) + 응답(800) = 3,700 토큰 (안전)
+const MAX_CHARS_GROQ = 7000
+const MAX_TOKENS_GROQ = 800
 
 // fallback 전환이 필요한 HTTP 상태 코드
 const FALLBACK_CODES = new Set([404, 422, 503, 529])
@@ -113,7 +116,7 @@ async function chat(userMessage: string, maxTokens = 1024): Promise<string> {
         { role: 'user',   content: userMessage.slice(0, MAX_CHARS_GROQ) + '\n\n(내용이 길어 일부만 분석합니다)' },
       ]
     : msgs
-  const groqMaxTokens = Math.min(maxTokens, 1500)  // Groq 응답도 제한
+  const groqMaxTokens = Math.min(maxTokens, MAX_TOKENS_GROQ)
 
   const res  = await request(GQ_BASE, GQ_KEY, GQ_MODEL, {}, groqMsg, groqMaxTokens)
   const data = await res.json()
