@@ -20,7 +20,7 @@ import {
   PanelLeftClose, PanelLeft, X,
   ChevronRight, ChevronDown, Folder, FolderOpen,
   ClipboardList, Users, Plus, Loader2, BarChart2, AlertCircle, CalendarDays, Activity, SearchCode,
-  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation, Mic,
+  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation, Mic, Shield,
 } from 'lucide-react'
 
 /* ── 파일 타입별 아이콘 (사이드바용) ── */
@@ -72,6 +72,7 @@ function loadNavOrder(): string[] {
 }
 import { cn } from '../../utils'
 import { useProjects } from '../../hooks/useProject'
+import { useWorkspace } from '../../hooks/useWorkspace'
 import type { Project } from '../../types'
 import { supabase } from '../../lib/supabase'
 
@@ -332,6 +333,7 @@ function ProjectButton({ project, isOpen, isActive, onClick }: {
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: Props) {
   const location = useLocation()
   const { projects, loading } = useProjects()
+  const { config, isAdmin } = useWorkspace()
 
   const activeProjectId = location.pathname.match(/\/projects\/([^/]+)/)?.[1] ?? null
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
@@ -447,9 +449,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {/* 로고 */}
       <div className="relative z-10 flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-          N
+          {config.appName[0]?.toUpperCase() ?? 'N'}
         </div>
-        {!collapsed && <span className="text-lg font-bold text-content">NEXT Hub</span>}
+        {!collapsed && <span className="text-lg font-bold text-content">{config.appName}</span>}
         <button
           onClick={onCloseMobile}
           className="ml-auto rounded-md p-1 text-content-muted hover:bg-surface-hover hover:text-content lg:hidden"
@@ -506,14 +508,16 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                     <FolderKanban size={16} className="shrink-0" />
                     <span>프로젝트</span>
                   </NavLink>
-                  <NavLink
-                    to="/projects/new"
-                    onClick={onCloseMobile}
-                    title="새 프로젝트"
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-content-subtle hover:text-primary transition-all"
-                  >
-                    <Plus size={13} />
-                  </NavLink>
+                  {(config.projectCreatePolicy === 'all' || isAdmin) && (
+                    <NavLink
+                      to="/projects/new"
+                      onClick={onCloseMobile}
+                      title="새 프로젝트"
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-content-subtle hover:text-primary transition-all"
+                    >
+                      <Plus size={13} />
+                    </NavLink>
+                  )}
                 </div>
 
                 {/* 프로젝트 목록 */}
@@ -666,6 +670,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             {[
               { to: '/templates', icon: FileText, label: '템플릿' },
               { to: '/settings',  icon: Settings, label: '설정'   },
+              // 히든 메뉴: 관리자에게만 표시
+              ...(isAdmin ? [{ to: '/admin', icon: Shield, label: '관리자' }] : []),
             ].map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}

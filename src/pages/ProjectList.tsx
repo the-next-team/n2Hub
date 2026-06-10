@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Search, Building2, Calendar, ChevronRight, FolderKanban, X, Pencil, Upload, Check } from 'lucide-react'
 import { useProjects } from '../hooks/useProject'
+import { useWorkspace } from '../hooks/useWorkspace'
 import { supabase } from '../lib/supabase'
 import { formatDate } from '../utils'
 import type { Project } from '../types'
@@ -39,10 +40,13 @@ async function uploadLogo(file: File, projectId: string): Promise<string> {
 /* ── 메인 페이지 ── */
 export default function ProjectList() {
   const { projects, loading, createProject, updateProject } = useProjects()
+  const { config, isAdmin } = useWorkspace()
   const [search, setSearch]         = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [editTarget, setEditTarget] = useState<Project | null>(null)
   const navigate = useNavigate()
+  // 권한 정책: 프로젝트 생성 (관리자 설정에서 제어)
+  const canCreate = config.projectCreatePolicy === 'all' || isAdmin
 
   const filtered = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -74,10 +78,12 @@ export default function ProjectList() {
         title="프로젝트"
         description={loading ? '불러오는 중...' : `${projects.length}개의 프로젝트`}
         actions={
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus size={16} />
-            새 프로젝트
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus size={16} />
+              새 프로젝트
+            </Button>
+          ) : undefined
         }
       />
 

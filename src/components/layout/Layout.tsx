@@ -9,6 +9,7 @@ import { useProject } from '../../hooks/useProject'
 import { Loader2 } from 'lucide-react'
 import ActionItemSticky from '../ActionItemSticky'
 import TodayTaskPanel from '../TodayTaskPanel'
+import { useWorkspace } from '../../hooks/useWorkspace'
 import { Component, type ReactNode } from 'react'
 
 class SafeBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
@@ -37,10 +38,16 @@ export default function Layout() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
   const [paletteOpen, setPaletteOpen] = useState(false)
   const { uploading, uploadProgress } = useUploadContext()
+  const { config } = useWorkspace()
 
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
   }, [collapsed])
+
+  // 브라우저 탭 제목을 워크스페이스 이름과 동기화
+  useEffect(() => {
+    document.title = `${config.appName} — IT 산출물 관리 플랫폼`
+  }, [config.appName])
 
   // Ctrl+K / Cmd+K → 커맨드 팔레트
   useEffect(() => {

@@ -20,6 +20,7 @@ import SprintBoard from './pages/SprintBoard'
 import ActionItemBoard from './pages/ActionItemBoard'
 import MeetingRoom from './pages/MeetingRoom'
 import Settings from './pages/Settings'
+import AdminSettings from './pages/AdminSettings'
 import Login from './pages/Login'
 
 function ProtectedRoute() {
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/documents/:docId" element={<DocumentEditor />} />
               <Route path="/templates" element={<TemplateManager />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/admin" element={<AdminSettings />} />
             </Route>
           </Route>
         </Routes>

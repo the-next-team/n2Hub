@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, User, ArrowRight, CheckCircle, FileText, Users, Zap } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import { useWorkspace } from '../hooks/useWorkspace'
 
 const FEATURES = [
   { icon: FileText, text: '프로젝트 산출물 중앙 관리' },
@@ -18,7 +19,9 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
   const [signUpDone, setSignUpDone] = useState(false)
   const { signIn, signUp } = useAuth()
+  const { config } = useWorkspace()
   const navigate = useNavigate()
+  const appName = config.appName
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,6 +29,7 @@ export default function Login() {
     setLoading(true)
     try {
       if (isSignUp) {
+        if (!config.allowSignup) { setError('현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.'); setLoading(false); return }
         if (!name.trim()) { setError('이름을 입력해주세요.'); setLoading(false); return }
         const { hasSession } = await signUp(email, password, name)
         // 이메일 인증 OFF → 가입 즉시 로그인됨
@@ -73,9 +77,9 @@ export default function Login() {
         {/* 로고 */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white font-bold text-lg">
-            N
+            {appName[0]?.toUpperCase() ?? 'N'}
           </div>
-          <span className="text-white text-xl font-bold">NEXT Hub</span>
+          <span className="text-white text-xl font-bold">{appName}</span>
         </div>
 
         {/* 메인 카피 */}
@@ -111,8 +115,8 @@ export default function Login() {
 
           {/* 모바일 로고 */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">N</div>
-            <span className="text-lg font-bold text-content">NEXT Hub</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">{appName[0]?.toUpperCase() ?? 'N'}</div>
+            <span className="text-lg font-bold text-content">{appName}</span>
           </div>
 
           {/* 제목 */}
@@ -211,16 +215,18 @@ export default function Login() {
             </button>
           </form>
 
-          {/* 전환 */}
-          <p className="mt-6 text-center text-sm text-content-muted">
-            {isSignUp ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}{' '}
-            <button
-              onClick={() => { setIsSignUp(!isSignUp); setError('') }}
-              className="text-primary font-semibold hover:underline"
-            >
-              {isSignUp ? '로그인' : '회원가입'}
-            </button>
-          </p>
+          {/* 전환 (관리자가 가입을 막으면 숨김) */}
+          {(config.allowSignup || isSignUp) && (
+            <p className="mt-6 text-center text-sm text-content-muted">
+              {isSignUp ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}{' '}
+              <button
+                onClick={() => { setIsSignUp(!isSignUp); setError('') }}
+                className="text-primary font-semibold hover:underline"
+              >
+                {isSignUp ? '로그인' : '회원가입'}
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>
