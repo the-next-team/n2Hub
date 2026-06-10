@@ -1,4 +1,4 @@
-# n2Hub — Claude Code 컨텍스트
+# NEXT Hub — Claude Code 컨텍스트
 
 > IT 프로젝트 산출물 통합관리 플랫폼
 > 이 파일은 Claude Code / Claude Desktop이 프로젝트 전체 컨텍스트를 이해하기 위한 파일입니다.
@@ -94,7 +94,7 @@ App.tsx
     └── ProtectedRoute (미인증 시 /login 리다이렉트)
         └── Layout (src/components/layout/Layout.tsx)
             ├── Sidebar
-            │   ├── n2Hub 로고
+            │   ├── NEXT Hub 로고
             │   ├── NavLink: 대시보드 / 프로젝트 / 템플릿 / 설정
             │   └── 하단: 사용자 이메일 + 로그아웃 버튼
             └── <Outlet> (페이지 렌더 영역)

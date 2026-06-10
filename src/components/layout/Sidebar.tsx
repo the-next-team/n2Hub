@@ -447,9 +447,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {/* 로고 */}
       <div className="relative z-10 flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-          n2
+          N
         </div>
-        {!collapsed && <span className="text-lg font-bold text-content">n2Hub</span>}
+        {!collapsed && <span className="text-lg font-bold text-content">NEXT Hub</span>}
         <button
           onClick={onCloseMobile}
           className="ml-auto rounded-md p-1 text-content-muted hover:bg-surface-hover hover:text-content lg:hidden"

@@ -1,6 +1,6 @@
 # 개발 환경 설정 및 가이드
 
-> n2Hub 로컬 개발 환경 구축 및 개발 팁
+> NEXT Hub 로컬 개발 환경 구축 및 개발 팁
 
 ---
 
@@ -138,7 +138,7 @@ F12 → Console / Sources 탭
 ### 대시보드 접속
 
 1. https://app.supabase.com 로그인
-2. 프로젝트 `n2Hub` 선택
+2. 프로젝트 `NEXT Hub` 선택
 3. **SQL Editor** 또는 **Table Editor**에서 데이터 관리
 
 ### 자주 사용하는 작업

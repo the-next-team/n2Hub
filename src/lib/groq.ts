@@ -2,7 +2,7 @@
 const OR_KEY   = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined
 const OR_BASE  = 'https://openrouter.ai/api/v1'
 const OR_MODEL = 'moonshotai/kimi-k2.6:free'
-const OR_EXTRA = { 'HTTP-Referer': 'https://n2hub.app', 'X-Title': 'n2Hub' }
+const OR_EXTRA = { 'HTTP-Referer': 'https://n2hub.app', 'X-Title': 'NEXT Hub' }
 
 // ── Fallback: Groq ────────────────────────────────────────────────────────
 // llama-3.1-8b-instant: 20,000 TPM (qwen3-32b는 6,000 TPM 한도로 대용량 문서 처리 불가)

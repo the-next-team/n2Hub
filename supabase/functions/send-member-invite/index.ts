@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const FROM_EMAIL     = Deno.env.get('FROM_EMAIL') ?? 'n2Hub <noreply@n2soft.co.kr>'
-const APP_URL        = Deno.env.get('APP_URL')    ?? 'http://localhost:5173'
+const FROM_EMAIL     = Deno.env.get('FROM_EMAIL') ?? 'NEXT Hub <noreply@n2soft.co.kr>'
+const APP_URL        = Deno.env.get('APP_URL')    ?? 'http://211.191.65.14:8091'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
@@ -39,7 +39,7 @@ serve(async (req) => {
         <!-- 헤더 -->
         <tr>
           <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:32px 40px;">
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">n2Hub</h1>
+            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">NEXT Hub</h1>
             <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">IT 프로젝트 산출물 통합관리</p>
           </td>
         </tr>
@@ -75,7 +75,7 @@ serve(async (req) => {
             </table>
 
             <p style="margin:28px 0 0;font-size:12px;color:#9ca3af;line-height:1.6;">
-              이 이메일은 n2Hub에서 자동 발송됐습니다.<br>
+              이 이메일은 NEXT Hub에서 자동 발송됐습니다.<br>
               문의: <a href="mailto:support@n2soft.co.kr" style="color:#6366f1;">support@n2soft.co.kr</a>
             </p>
           </td>
@@ -96,7 +96,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from:    FROM_EMAIL,
         to:      [to],
-        subject: `[n2Hub] ${inviterName} 님이 "${projectName}" 프로젝트에 초대했습니다`,
+        subject: `[NEXT Hub] ${inviterName} 님이 "${projectName}" 프로젝트에 초대했습니다`,
         html,
       }),
     })

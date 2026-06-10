@@ -1,6 +1,6 @@
 # 기여 가이드 (CONTRIBUTING)
 
-> n2Hub 프로젝트에 기여하는 방법
+> NEXT Hub 프로젝트에 기여하는 방법
 
 ---
 
@@ -456,7 +456,7 @@ const query = supabase
 
 ## 🙏 감사합니다!
 
-당신의 기여는 n2Hub를 더 좋게 만들고 있습니다! 🎉
+당신의 기여는 NEXT Hub를 더 좋게 만들고 있습니다! 🎉
 
 ---
 

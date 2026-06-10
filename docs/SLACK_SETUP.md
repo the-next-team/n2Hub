@@ -12,7 +12,7 @@
 
 1. https://api.slack.com/apps 접속
 2. **"Create New App"** → **"From scratch"**
-3. App name: `n2Hub GitHub`
+3. App name: `NEXT Hub GitHub`
 4. Workspace 선택
 5. **Create App**
 
@@ -191,7 +191,7 @@ GitHub → Actions → slack-notification → [워크플로우 실행]
 
 ### 1. 채널에서 Slack App 초대
 
-Slack 채널 → **설정** → **앱 추가** → `n2Hub GitHub` 선택
+Slack 채널 → **설정** → **앱 추가** → `NEXT Hub GitHub` 선택
 
 ### 2. Slack 메시지 커스터마이징
 

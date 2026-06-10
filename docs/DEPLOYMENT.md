@@ -1,6 +1,6 @@
 # 배포 및 운영 가이드
 
-> n2Hub 프로덕션 배포, 모니터링, 운영 절차
+> NEXT Hub 프로덕션 배포, 모니터링, 운영 절차
 
 ---
 
@@ -63,10 +63,10 @@ vercel
 
 프롬프트:
 ```
-? Set up and deploy "n2Hub"? [Y/n] y
+? Set up and deploy "NEXT Hub"? [Y/n] y
 ? Which scope do you want to deploy to? (your-team)
 ? Link to existing project? [y/N] N
-? What's your project's name? n2Hub
+? What's your project's name? NEXT Hub
 ? In which directory is your code? ./
 ? Want to modify these settings? [y/N] N
 ```
@@ -202,7 +202,7 @@ Database → Monitoring
 **Dashboard:** https://vercel.com/dashboard
 
 ```
-n2Hub → Analytics
+NEXT Hub → Analytics
 ├─ Response Time (평균 응답 시간)
 ├─ Status Codes (200, 404, 500 등)
 ├─ Bandwidth (데이터 전송량)
@@ -478,6 +478,6 @@ git push origin develop
 
 <div align="center">
 
-**n2Hub 운영팀이 항상 준비하고 있습니다.** 🚀
+**NEXT Hub 운영팀이 항상 준비하고 있습니다.** 🚀
 
 </div>
