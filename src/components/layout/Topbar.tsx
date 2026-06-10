@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Menu, Sun, Moon, ChevronRight, LogOut, Home, Bell, Check, ClipboardList, Plus, Send, Loader2 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 import { useProject } from '../../hooks/useProject'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useActionItems } from '../../hooks/useActionItems'
@@ -301,6 +302,7 @@ function UserMenu() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [displayName, setDisplayName] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -311,12 +313,25 @@ function UserMenu() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
+  // 프로필 이름 조회 (profiles → user_metadata → 이메일 앞부분 순 fallback)
+  useEffect(() => {
+    if (!user?.id) return
+    supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle()
+      .then(({ data }) => {
+        const name = data?.display_name
+          || (user.user_metadata?.display_name as string | undefined)
+          || user.email?.split('@')[0]
+          || ''
+        setDisplayName(name)
+      })
+  }, [user?.id, user?.email, user?.user_metadata?.display_name])
+
   async function handleSignOut() {
     await signOut()
     navigate('/login')
   }
 
-  const initial    = user?.email?.[0]?.toUpperCase() ?? '?'
+  const initial    = (displayName || user?.email || '?')[0].toUpperCase()
   const avatarUrl  = user?.user_metadata?.avatar_url as string | undefined
 
   return (
@@ -336,16 +351,21 @@ function UserMenu() {
             {initial}
           </span>
         )}
-        <span className="hidden max-w-[140px] truncate text-sm text-content-muted sm:block">
-          {user?.email}
+        <span className="hidden flex-col items-start leading-tight sm:flex">
+          <span className="max-w-[140px] truncate text-sm font-medium text-content">
+            {displayName}
+          </span>
+          <span className="max-w-[140px] truncate text-[11px] text-content-subtle">
+            {user?.email}
+          </span>
         </span>
       </button>
 
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-popover">
           <div className="border-b border-line px-4 py-3">
-            <p className="text-xs text-content-subtle">로그인 계정</p>
-            <p className="truncate text-sm font-medium text-content">{user?.email}</p>
+            <p className="truncate text-sm font-semibold text-content">{displayName}</p>
+            <p className="truncate text-xs text-content-subtle mt-0.5">{user?.email}</p>
           </div>
           <button
             onClick={handleSignOut}
