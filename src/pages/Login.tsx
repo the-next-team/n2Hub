@@ -25,8 +25,10 @@ export default function Login() {
     setLoading(true)
     try {
       if (isSignUp) {
-        await signUp(email, password)
-        setSignUpDone(true)
+        const { hasSession } = await signUp(email, password)
+        // 이메일 인증 OFF → 가입 즉시 로그인됨
+        if (hasSession) navigate('/dashboard')
+        else setSignUpDone(true)
       } else {
         await signIn(email, password)
         navigate('/dashboard')
