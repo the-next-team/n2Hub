@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 
 declare global {
   interface Window {
@@ -34,9 +35,85 @@ export default function OnlyOfficeEditor({
 }: Props) {
   const { user } = useAuth()
   const instanceRef = useRef<{ destroyEditor: () => void } | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [errMsg, setErrMsg] = useState('')
+  const [status, setStatus]   = useState<'loading' | 'ready' | 'error'>('loading')
+  const [errMsg, setErrMsg]   = useState('')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
 
+  // ── 브라우저 쪽 저장 처리 ──────────────────────────────────────────────────
+  // Supabase 클라우드 Edge Function은 사내 OnlyOffice IP에 접근 불가
+  // → 큐(file_save_queue)에 저장된 URL을 브라우저(사내망)가 처리
+  const processSaveQueue = useCallback(async () => {
+    const { data: rows, error } = await supabase
+      .from('file_save_queue')
+      .select('*')
+      .eq('storage_path', storagePath)
+      .order('created_at', { ascending: true })
+
+    if (error || !rows || rows.length === 0) return
+
+    setSaveState('saving')
+    for (const row of rows) {
+      try {
+        const fileResp = await fetch(row.oo_url)
+        if (!fileResp.ok) throw new Error(`OO fetch failed: ${fileResp.status}`)
+        const buffer = await fileResp.arrayBuffer()
+
+        const ext = fileName.split('.').pop()?.toLowerCase() ?? 'docx'
+        const mimeMap: Record<string, string> = {
+          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          xlsm: 'application/vnd.ms-excel.sheet.macroEnabled.12',
+          pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          hwp:  'application/haansofthwp',
+          hwpx: 'application/haansofthwp',
+        }
+        const contentType = mimeMap[ext] ?? 'application/octet-stream'
+
+        const { error: uploadErr } = await supabase.storage
+          .from('documents')
+          .upload(storagePath, buffer, { contentType, upsert: true })
+
+        if (uploadErr) throw uploadErr
+
+        // 처리 완료 → 큐에서 삭제
+        await supabase.from('file_save_queue').delete().eq('id', row.id)
+        console.log('[OO Save] saved via browser:', storagePath)
+      } catch (err) {
+        console.error('[OO Save] failed for queue row', row.id, err)
+      }
+    }
+    setSaveState('saved')
+    setTimeout(() => setSaveState('idle'), 3000)
+  }, [storagePath, fileName])
+
+  // 파일 열릴 때 미처리 큐 체크 + Realtime 구독
+  useEffect(() => {
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+
+    // 1. 열릴 때 이미 대기 중인 항목 즉시 처리
+    processSaveQueue()
+
+    // 2. Realtime INSERT 구독 → 즉각 처리
+    const channel = supabase
+      .channel(`oo-save-${storagePath}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'file_save_queue',
+          filter: `storage_path=eq.${storagePath}` },
+        () => { processSaveQueue() },
+      )
+      .subscribe()
+
+    // 3. 폴백 폴링 (Realtime 미작동 대비, 5초마다)
+    pollTimer = setInterval(processSaveQueue, 5000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      if (pollTimer) clearInterval(pollTimer)
+    }
+  }, [storagePath, processSaveQueue])
+
+  // ── OnlyOffice 에디터 초기화 ────────────────────────────────────────────────
   useEffect(() => {
     let active = true
     setStatus('loading')
@@ -153,6 +230,23 @@ export default function OnlyOfficeEditor({
           >
             뒤로 가기
           </button>
+        </div>
+      )}
+
+      {/* 저장 상태 표시 */}
+      {saveState !== 'idle' && (
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-md bg-white border border-gray-200">
+          {saveState === 'saving' ? (
+            <>
+              <Loader2 size={12} className="animate-spin text-blue-500" />
+              <span className="text-gray-600">저장 중...</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={12} className="text-green-500" />
+              <span className="text-gray-600">저장 완료</span>
+            </>
+          )}
         </div>
       )}
 
