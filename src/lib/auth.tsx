@@ -31,7 +31,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   /** 반환값 hasSession: true면 즉시 로그인됨 (이메일 인증 OFF), false면 인증 메일 대기 */
-  signUp: (email: string, password: string) => Promise<{ hasSession: boolean }>
+  signUp: (email: string, password: string, displayName: string) => Promise<{ hasSession: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -59,8 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(translateAuthError(error.message))
   }
 
-  async function signUp(email: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  async function signUp(email: string, password: string, displayName: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      // raw_user_meta_data로 전달 → handle_new_user 트리거가 profiles.display_name에 저장
+      options: { data: { display_name: displayName.trim() } },
+    })
     if (error) throw new Error(translateAuthError(error.message))
     return { hasSession: !!data.session }
   }

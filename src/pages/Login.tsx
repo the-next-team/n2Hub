@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mail, Lock, ArrowRight, CheckCircle, FileText, Users, Zap } from 'lucide-react'
+import { Mail, Lock, User, ArrowRight, CheckCircle, FileText, Users, Zap } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 const FEATURES = [
@@ -12,6 +12,7 @@ const FEATURES = [
 export default function Login() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName]         = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -25,7 +26,8 @@ export default function Login() {
     setLoading(true)
     try {
       if (isSignUp) {
-        const { hasSession } = await signUp(email, password)
+        if (!name.trim()) { setError('이름을 입력해주세요.'); setLoading(false); return }
+        const { hasSession } = await signUp(email, password, name)
         // 이메일 인증 OFF → 가입 즉시 로그인됨
         if (hasSession) navigate('/dashboard')
         else setSignUpDone(true)
@@ -126,6 +128,25 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 이름 (회원가입 시에만) */}
+            {isSignUp && (
+              <div>
+                <label className="block text-sm font-medium text-content mb-1.5">이름</label>
+                <div className="relative">
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-subtle" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-line rounded-xl text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors placeholder:text-content-subtle"
+                    placeholder="홍길동"
+                    required
+                    maxLength={30}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* 이메일 */}
             <div>
               <label className="block text-sm font-medium text-content mb-1.5">이메일</label>
