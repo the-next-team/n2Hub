@@ -33,3 +33,4 @@ npm-debug.log*
 pnpm-debug.log*
 
 .vercel
+deploy/n2hub-dist.zip
