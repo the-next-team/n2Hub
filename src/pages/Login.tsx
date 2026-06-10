@@ -102,7 +102,7 @@ export default function Login() {
         </div>
 
         {/* 하단 */}
-        <p className="text-white/40 text-xs">© 2025 n2soft. All rights reserved.</p>
+        <p className="text-white/40 text-xs">© 2026 n2soft. All rights reserved.</p>
       </div>
 
       {/* ── 우측 폼 패널 ── */}
