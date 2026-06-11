@@ -6,7 +6,7 @@ import {
   FileText, FileSpreadsheet, Presentation, File,
   Folder, FolderOpen, FolderPlus,
   Loader2, ExternalLink,
-  PlusCircle, BookOpen, X, Check, AlertTriangle, ClipboardList,
+  X, Check, AlertTriangle, ClipboardList,
 } from 'lucide-react'
 import { useFileTree, getItemPath } from '../hooks/useFileTree'
 import { useFileSessions } from '../hooks/useFileSession'
@@ -17,16 +17,7 @@ import type { StorageItem } from '../hooks/useFiles'
 import { useTasks } from '../hooks/useTasks'
 import type { Task } from '../hooks/useTasks'
 import { useDocuments } from '../hooks/useDocument'
-import type { DocumentCategory, DocumentStatus } from '../types'
 import { Button, PageHeader } from '../components/ui'
-
-const CATEGORY_OPTIONS: DocumentCategory[] = ['요구사항', '설계', '개발', '테스트', '배포', '기타']
-const STATUS_BADGE: Record<DocumentStatus, { label: string; cls: string }> = {
-  '작성중': { label: '작성중', cls: 'bg-warning-soft text-warning' },
-  '검토중': { label: '검토중', cls: 'bg-primary-soft text-primary' },
-  '승인':   { label: '승인',   cls: 'bg-success-soft text-success' },
-  '완료':   { label: '완료',   cls: 'bg-surface-hover text-content-muted' },
-}
 const ACCEPT_TYPES = '*'  // 모든 파일 형식 허용
 
 function formatFileSize(bytes?: number) {
@@ -65,7 +56,7 @@ export default function DocumentList() {
     getFlatList, openPaths, loadingPaths, initialLoading, uploading, uploadProgress, error, setError,
     rootStats, toggleFolder, uploadFiles, uploadFromDataTransfer, createFolder, downloadFile, deleteItem, linkToTask,
   } = useFileTree(id!)
-  const { documents, loading: docsLoading, createDocument, deleteDocument } = useDocuments(id!)
+  const { createDocument } = useDocuments(id!)
   const { tasks: allTasks } = useTasks(id!)
   const leafTasks    = allTasks.filter(t => t.wbs_level === 3)
   const fileSessions = useFileSessions(id!)
@@ -78,18 +69,6 @@ export default function DocumentList() {
   // ── 인라인 폴더 생성 ──────────────────────────────────────────────────────
   const [inlineFolder, setInlineFolder] = useState<{ parentPath: string; value: string } | null>(null)
   const [creatingFolder, setCreatingFolder] = useState(false)
-
-  // ── 에디터 문서 삭제 확인 ─────────────────────────────────────────────────
-  const [confirmDocDelete, setConfirmDocDelete] = useState<{ id: string; title: string } | null>(null)
-  const [deletingDoc, setDeletingDoc] = useState(false)
-
-  const handleConfirmDocDelete = useCallback(async () => {
-    if (!confirmDocDelete) return
-    setDeletingDoc(true)
-    try { await deleteDocument(confirmDocDelete.id) }
-    catch { /* ignore */ }
-    finally { setDeletingDoc(false); setConfirmDocDelete(null) }
-  }, [confirmDocDelete, deleteDocument])
 
   // ── 파일 삭제 확인 ─────────────────────────────────────────────────────────
   const [confirmDelete, setConfirmDelete] = useState<{ item: StorageItem | null; parentPath: string } | null>(null)
@@ -151,12 +130,6 @@ export default function DocumentList() {
     }
   }
 
-  // ── 에디터 문서 생성 모달 ─────────────────────────────────────────────────
-  const [showNewDoc, setShowNewDoc] = useState(false)
-  const [newDocTitle, setNewDocTitle] = useState('')
-  const [newDocCategory, setNewDocCategory] = useState<DocumentCategory>('요구사항')
-  const [creatingDoc, setCreatingDoc] = useState(false)
-
   const nodes = useMemo(() => getFlatList(), [getFlatList])
 
   // ── 업로드 트리거 ─────────────────────────────────────────────────────────
@@ -190,27 +163,6 @@ export default function DocumentList() {
     if (ok) setInlineFolder(null)
   }
 
-  // ── 에디터 문서 생성 ──────────────────────────────────────────────────────
-  async function handleCreateDoc(e: React.FormEvent) {
-    e.preventDefault()
-    if (!newDocTitle.trim()) return
-    setCreatingDoc(true)
-    try {
-      const doc = await createDocument({
-        title: newDocTitle.trim(),
-        category: newDocCategory,
-        status: '작성중',
-        dueDate: '',
-        description: '',
-      })
-      setShowNewDoc(false)
-      setNewDocTitle('')
-      navigate(`/documents/${doc.id}`)
-    } finally {
-      setCreatingDoc(false)
-    }
-  }
-
   // ── 루트 드래그앤드롭 (파일 + 폴더 모두 지원) ────────────────────────────
   const handleRootDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
@@ -237,17 +189,13 @@ export default function DocumentList() {
         description={
           initialLoading
             ? '불러오는 중...'
-            : `문서 ${documents.length}개 · 폴더 ${rootStats.folders}개 · 파일 ${rootStats.files}개`
+            : `폴더 ${rootStats.folders}개 · 파일 ${rootStats.files}개`
         }
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowMinutes(true)}>
               <ClipboardList size={16} />
               회의록 생성
-            </Button>
-            <Button variant="secondary" onClick={() => setShowNewDoc(true)}>
-              <PlusCircle size={16} />
-              새 에디터 문서
             </Button>
             <Button
               variant="secondary"
@@ -307,85 +255,6 @@ export default function DocumentList() {
           <button onClick={() => setError(null)} className="ml-4 text-danger hover:opacity-70">✕</button>
         </div>
       )}
-
-      {/* ── 에디터 문서 섹션 ── */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-content flex items-center gap-1.5">
-            <BookOpen size={15} className="text-primary" />
-            에디터 문서
-            <span className="text-xs font-normal text-content-subtle ml-1">{documents.length}개</span>
-          </h2>
-        </div>
-        {docsLoading ? (
-          <div className="flex items-center gap-2 text-content-subtle text-sm py-4">
-            <Loader2 size={14} className="animate-spin" /> 불러오는 중…
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line py-8 flex flex-col items-center gap-2 text-content-subtle">
-            <BookOpen size={28} className="opacity-30" />
-            <p className="text-sm">에디터 문서가 없습니다.</p>
-            <button onClick={() => setShowNewDoc(true)} className="mt-1 text-sm text-primary hover:underline">
-              + 새 문서 만들기
-            </button>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-line bg-surface overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b border-line bg-canvas">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-content-muted">제목</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-content-muted w-20">분류</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-content-muted w-24">상태</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-content-muted w-20">버전</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-content-muted w-28">수정일</th>
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {documents.map(doc => {
-                  const badge = STATUS_BADGE[doc.status] ?? STATUS_BADGE['작성중']
-                  return (
-                    <tr key={doc.id}
-                      className="group hover:bg-surface-hover cursor-pointer transition-colors"
-                      onClick={() => navigate(`/documents/${doc.id}`)}>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <FileText size={15} className="text-primary shrink-0" />
-                          <span className="font-medium text-content">{doc.title}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-content-muted text-xs">{doc.category}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
-                          {badge.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className="font-mono text-xs text-content-muted bg-surface-hover px-2 py-0.5 rounded">
-                          {doc.currentVersion}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-content-muted text-xs">
-                        {formatDate(doc.updatedAt || doc.createdAt)}
-                      </td>
-                      <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={() => setConfirmDocDelete({ id: doc.id, title: doc.title })}
-                          className="p-1.5 rounded-md text-content-subtle hover:text-danger hover:bg-danger-soft transition-colors opacity-0 group-hover:opacity-100"
-                          title="삭제"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* ── 파일 트리 ── */}
       <div
@@ -525,33 +394,6 @@ export default function DocumentList() {
         )}
       </div>
 
-      {/* ── 에디터 문서 삭제 확인 ── */}
-      {confirmDocDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-surface rounded-xl shadow-modal w-full max-w-sm overflow-hidden animate-fade-in-scale">
-            <div className="flex items-start gap-3 px-5 pt-5 pb-4">
-              <div className="shrink-0 w-10 h-10 rounded-full bg-danger-soft flex items-center justify-center">
-                <AlertTriangle size={20} className="text-danger" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-content">문서 삭제</h2>
-                <p className="text-sm text-content-muted mt-1">
-                  <span className="font-medium text-content">{confirmDocDelete.title}</span> 문서와 모든 버전 이력이 삭제됩니다.
-                </p>
-                <p className="text-xs text-danger mt-2 font-medium">⚠ 삭제 후에는 복구할 수 없습니다.</p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-line bg-canvas">
-              <Button variant="secondary" onClick={() => setConfirmDocDelete(null)} disabled={deletingDoc}>취소</Button>
-              <Button variant="danger-filled" onClick={handleConfirmDocDelete} disabled={deletingDoc}>
-                {deletingDoc ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                삭제
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── 삭제 확인 모달 ── */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -660,52 +502,6 @@ export default function DocumentList() {
         </div>
       )}
 
-      {/* ── 새 에디터 문서 모달 ── */}
-      {showNewDoc && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-surface rounded-xl shadow-modal w-full max-w-sm animate-fade-in-scale">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-              <h2 className="text-base font-semibold text-content flex items-center gap-2">
-                <PlusCircle size={16} className="text-primary" />
-                새 문서 만들기
-              </h2>
-              <button onClick={() => setShowNewDoc(false)} className="text-content-subtle hover:text-content-muted">
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleCreateDoc} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-content mb-1.5">문서 제목 *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newDocTitle}
-                  onChange={e => setNewDocTitle(e.target.value)}
-                  placeholder="예: 요구사항 정의서"
-                  className="w-full px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-canvas"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-content mb-1.5">분류</label>
-                <select
-                  value={newDocCategory}
-                  onChange={e => setNewDocCategory(e.target.value as DocumentCategory)}
-                  className="w-full px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-canvas"
-                >
-                  {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <Button type="button" variant="secondary" onClick={() => setShowNewDoc(false)}>취소</Button>
-                <Button type="submit" disabled={creatingDoc || !newDocTitle.trim()}>
-                  {creatingDoc ? <Loader2 size={14} className="animate-spin" /> : <PlusCircle size={14} />}
-                  문서 생성 후 편집
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
