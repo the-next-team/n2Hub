@@ -13,7 +13,6 @@ import { cn } from '../../utils'
 const labelMap: Record<string, string> = {
   dashboard:    '대시보드',
   projects:     '프로젝트',
-  templates:    '템플릿',
   settings:     '설정',
   documents:    '산출물',
   tasks:        'WBS 작업관리',

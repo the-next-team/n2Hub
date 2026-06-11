@@ -684,8 +684,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           )}
           <div className="space-y-1">
             {[
-              { to: '/templates', icon: FileText, label: '템플릿' },
-              { to: '/settings',  icon: Settings, label: '설정'   },
+                { to: '/settings',  icon: Settings, label: '설정'   },
               // 히든 메뉴: 관리자에게만 표시
               ...(isAdmin ? [{ to: '/admin', icon: Shield, label: '관리자' }] : []),
             ].map(({ to, icon: Icon, label }) => (
