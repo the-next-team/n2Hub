@@ -88,13 +88,13 @@ export function useMembers(projectId: string) {
       for (const i of issues ?? []) { if (i.assignee_id) issueMap[i.assignee_id] = (issueMap[i.assignee_id] ?? 0) + 1 }
 
       // WBS 태스크 담당 수
-      const { data: tasks } = await supabase.from('wbs_tasks').select('assignee_id, status').eq('project_id', projectId)
+      const { data: tasks } = await supabase.from('wbs_tasks').select('assignee_user_id, status').eq('project_id', projectId)
       const taskMap: Record<string, number> = {}
       const doneMap: Record<string, number> = {}
       for (const t of tasks ?? []) {
-        if (t.assignee_id) {
-          taskMap[t.assignee_id] = (taskMap[t.assignee_id] ?? 0) + 1
-          if (t.status === 'completed') doneMap[t.assignee_id] = (doneMap[t.assignee_id] ?? 0) + 1
+        if (t.assignee_user_id) {
+          taskMap[t.assignee_user_id] = (taskMap[t.assignee_user_id] ?? 0) + 1
+          if (t.status === 'completed') doneMap[t.assignee_user_id] = (doneMap[t.assignee_user_id] ?? 0) + 1
         }
       }
 
