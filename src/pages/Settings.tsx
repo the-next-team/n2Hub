@@ -247,10 +247,10 @@ const TOGGLE_FIELDS: { key: keyof CoverConfig; label: string; group?: string }[]
 
 const SAMPLE_META: CoverMeta = {
   title:       '사업수행계획서',
-  code:        'FNDB-01-PP-010',
+  code:        'PROJ-01-PP-010',
   version:     'v0.1',
-  projectName: '핀다AI뱅크 저축은행 뱅킹시스템 구축',
-  clientName:  '(주)핀다',
+  projectName: '프로젝트명',
+  clientName:  '(주)고객사',
 }
 
 function CoverSection() {
