@@ -238,6 +238,37 @@ function MemberCard({
               <span className="font-semibold text-content text-sm truncate">
                 {member.display_name ?? member.email.split('@')[0]}
               </span>
+              {/* 역할 태그 (이름 옆, 클릭 시 변경 드롭다운) */}
+              <div ref={roleRef} className="relative shrink-0">
+                <button
+                  onClick={() => canEdit && setShowRole(s => !s)}
+                  disabled={!canEdit}
+                  className={cn(
+                    'flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors',
+                    roleColor,
+                    canEdit && 'hover:opacity-80 cursor-pointer',
+                  )}
+                >
+                  {roleLabel}
+                  {canEdit && <ChevronDown size={9} />}
+                </button>
+                {showRole && (
+                  <div className="absolute left-0 top-full mt-1 z-20 w-36 bg-surface border border-line rounded-xl shadow-popover overflow-hidden">
+                    {ROLES.map(r => (
+                      <button key={r} onClick={() => { save({ role: r }); setShowRole(false) }}
+                        className={cn(
+                          'w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-hover',
+                          member.role === r && 'bg-primary-soft text-primary font-semibold',
+                        )}>
+                        <span className={cn('inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold mr-1.5', ROLE_CFG[r].color)}>
+                          {ROLE_CFG[r].label}
+                        </span>
+                        {ROLE_CFG[r].desc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {isMe && <span className="text-[10px] px-1.5 py-0.5 bg-primary-soft text-primary rounded-full font-medium">나</span>}
               {(canEdit || isMe) && (
                 <button onClick={() => setEditName(true)} className="opacity-0 group-hover:opacity-100 p-0.5 text-content-subtle hover:text-primary transition-all">
@@ -247,38 +278,6 @@ function MemberCard({
             </div>
           )}
           <p className="text-xs text-content-subtle truncate">{member.email}</p>
-        </div>
-
-        {/* 역할 드롭다운 */}
-        <div ref={roleRef} className="relative shrink-0">
-          <button
-            onClick={() => canEdit && setShowRole(s => !s)}
-            disabled={!canEdit}
-            className={cn(
-              'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors',
-              roleColor,
-              canEdit && 'hover:opacity-80 cursor-pointer',
-            )}
-          >
-            {roleLabel}
-            {canEdit && <ChevronDown size={10} />}
-          </button>
-          {showRole && (
-            <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-surface border border-line rounded-xl shadow-popover overflow-hidden">
-              {ROLES.map(r => (
-                <button key={r} onClick={() => { save({ role: r }); setShowRole(false) }}
-                  className={cn(
-                    'w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface-hover',
-                    member.role === r && 'bg-primary-soft text-primary font-semibold',
-                  )}>
-                  <span className={cn('inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold mr-1.5', ROLE_CFG[r].color)}>
-                    {ROLE_CFG[r].label}
-                  </span>
-                  {ROLE_CFG[r].desc}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -375,7 +374,6 @@ export default function MemberManage() {
   const [email, setEmail]         = useState('')
   const [role, setRole]           = useState<MemberRole>('developer')
   const [part, setPart]           = useState('')
-  const [name, setName]           = useState('')
   const [adding, setAdding]       = useState(false)
   const [addErr, setAddErr]       = useState<string | null>(null)
   const [addOk, setAddOk]         = useState(false)
@@ -384,7 +382,7 @@ export default function MemberManage() {
   // 이름/이메일 자동완성
   const [suggestions, setSuggestions] = useState<{ id: string; email: string; display_name: string | null }[]>([])
   const [showSuggest, setShowSuggest] = useState(false)
-  const [picked, setPicked]           = useState<{ id: string; email: string } | null>(null)
+  const [picked, setPicked]           = useState<{ id: string; email: string; display_name: string | null } | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef     = useRef<HTMLDivElement>(null)
 
@@ -415,22 +413,24 @@ export default function MemberManage() {
     }
   }
   const selectSuggestion = (p: { id: string; email: string; display_name: string | null }) => {
-    setEmail(p.email); setName(p.display_name ?? ''); setPicked({ id: p.id, email: p.email }); setShowSuggest(false)
+    setEmail(p.email); setPicked(p); setShowSuggest(false)
   }
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault(); setAddErr(null)
-    if (!email.trim() || !name.trim()) return
+    if (!email.trim()) return
     setAdding(true)
     try {
       // 자동완성에서 선택한 사용자 우선, 아니면 정확한 이메일로 조회
       const found = picked ?? await findUserByEmail(email)
       if (!found) { setAddErr('사용자를 찾을 수 없습니다. 이름을 입력한 경우 검색 목록에서 선택해주세요.'); return }
-      await addMember(found.id, found.email, role, name, part || undefined, {
+      // 표시 이름은 프로필의 이름을 그대로 사용
+      const displayName = found.display_name ?? found.email.split('@')[0]
+      await addMember(found.id, found.email, role, displayName, part || undefined, {
         projectName: project?.name ?? '프로젝트',
         inviterName: user?.email?.split('@')[0] ?? '팀원',
       })
-      setEmail(''); setName(''); setPart(''); setRole('developer'); setPicked(null); setAddOk(true); setShowForm(false)
+      setEmail(''); setPart(''); setRole('developer'); setPicked(null); setAddOk(true); setShowForm(false)
       setTimeout(() => setAddOk(false), 3000)
     } catch (err) { setAddErr((err as Error).message) }
     finally { setAdding(false) }
@@ -498,12 +498,6 @@ export default function MemberManage() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* 이름 */}
-              <div>
-                <label className="block text-xs font-medium text-content-muted mb-1">표시 이름 *</label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="예: 홍길동" required className={inputCls} />
               </div>
 
               {/* 역할 */}
