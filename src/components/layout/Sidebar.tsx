@@ -74,6 +74,7 @@ function loadNavOrder(): string[] {
 import { cn } from '../../utils'
 import { useProjects } from '../../hooks/useProject'
 import { useWorkspace } from '../../hooks/useWorkspace'
+import { useAuth } from '../../lib/auth'
 import type { Project } from '../../types'
 import { supabase } from '../../lib/supabase'
 
@@ -335,6 +336,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   const location = useLocation()
   const { projects, loading } = useProjects()
   const { config, isAdmin } = useWorkspace()
+  const { user } = useAuth()
+  const [pmProjectIds, setPmProjectIds] = useState<Set<string>>(new Set())
 
   const activeProjectId = location.pathname.match(/\/projects\/([^/]+)/)?.[1] ?? null
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
@@ -410,6 +413,16 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   useEffect(() => {
     if (activeProjectId) setOpenIds(prev => new Set([...prev, activeProjectId]))
   }, [activeProjectId])
+
+  useEffect(() => {
+    if (!user?.id || openIds.size === 0) return
+    supabase.from('project_members').select('project_id, role')
+      .eq('user_id', user.id).in('project_id', [...openIds])
+      .then(({ data }) => {
+        const pmIds = new Set((data ?? []).filter(r => r.role === 'pm').map(r => r.project_id))
+        setPmProjectIds(pmIds)
+      })
+  }, [openIds, user?.id])
 
   function toggleProject(id: string) {
     setOpenIds(prev => {
@@ -547,7 +560,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                             <div className="ml-4 mt-1 mb-2 border-l-2 border-line pl-2.5">
 
                               {/* ── 드래그 가능한 메뉴 목록 (즐겨찾기 → 상단) ── */}
-                              {sortedNavItems.map((item, idx) => {
+                              {sortedNavItems.filter(item =>
+                                item.key !== 'settings' || isAdmin || pmProjectIds.has(project.id)
+                              ).map((item, idx) => {
                                 const { key, icon: Icon, label } = item
                                 const path      = `/projects/${project.id}/${key}`
                                 const isDoc     = key === 'documents'

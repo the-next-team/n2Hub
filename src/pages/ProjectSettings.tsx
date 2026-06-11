@@ -73,6 +73,10 @@ export default function ProjectSettings() {
   const { settings } = useSettings()
   const { user } = useAuth()
 
+  /* 기본 정보 */
+  const [systemCode,    setSystemCode]    = useState('')
+  const [systemName,    setSystemName]    = useState('')
+
   /* 고객사 정보 */
   const [clientName,    setClientName]    = useState('')
   const [clientLogoUrl, setClientLogoUrl] = useState('')
@@ -89,6 +93,8 @@ export default function ProjectSettings() {
 
   useEffect(() => {
     if (!project || initialized) return
+    setSystemCode(project.systemCode ?? '')
+    setSystemName(project.systemName ?? '')
     setClientName(project.clientName ?? '')
     setClientLogoUrl(project.logoUrl ?? '')
     if (project.coverConfig) {
@@ -136,6 +142,8 @@ export default function ProjectSettings() {
     setSaving(true)
     try {
       await updateProject(id, {
+        systemCode:  systemCode  || null as unknown as string,
+        systemName:  systemName  || null as unknown as string,
         clientName,
         logoUrl:     clientLogoUrl || null,
         coverConfig: cfg as unknown as Record<string, unknown>,
@@ -184,6 +192,38 @@ export default function ProjectSettings() {
 
       <div className="flex-1 overflow-auto p-8">
         <div className="max-w-5xl mx-auto space-y-6">
+
+          {/* ── 시스템 정보 ── */}
+          <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-content">
+              <FileText size={16} className="text-content-muted" />시스템 정보
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-medium text-content-muted mb-1.5">시스템 코드</label>
+                <input
+                  type="text"
+                  value={systemCode}
+                  onChange={e => setSystemCode(e.target.value.toUpperCase())}
+                  placeholder="예: FNDB"
+                  maxLength={20}
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-canvas text-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                />
+                <p className="text-xs text-content-subtle mt-1">산출물 파일명 앞에 붙는 짧은 코드 (예: FNDB-01-PP-010)</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-content-muted mb-1.5">시스템명</label>
+                <input
+                  type="text"
+                  value={systemName}
+                  onChange={e => setSystemName(e.target.value)}
+                  placeholder="예: N2SB 저축은행 뱅킹시스템"
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-canvas text-content text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                />
+                <p className="text-xs text-content-subtle mt-1">구축 대상 시스템의 전체 이름</p>
+              </div>
+            </div>
+          </section>
 
           {/* ── 고객사 정보 ── */}
           <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
