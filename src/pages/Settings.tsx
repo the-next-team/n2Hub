@@ -1,22 +1,58 @@
 import { useRef, useState } from 'react'
 import {
-  User, Building2, Upload, X, Save, AlertCircle, CheckCircle2,
+  User, Building2, Upload, X, Save, AlertCircle, CheckCircle2, Camera,
 } from 'lucide-react'
 import { PageHeader } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import type { CoverStyle } from '../hooks/useSettings'
 import { useAuth } from '../lib/auth'
+import { UserAvatar } from '../components/UserAvatar'
+
+/* ── 이모지 / 배경색 목록 ── */
+const EMOJI_LIST = [
+  '😀','😄','😎','🤩','🥳','🤓','😇','🥸','🤠','🧐',
+  '🤖','👻','🦸','🧙','👑','🎃','🧛','🧜','🦄','🧞',
+  '🐱','🐶','🦊','🐻','🐼','🐯','🦁','🐸','🐺','🐨',
+  '🔥','⚡','💎','🌊','🌸','🚀','🎯','🏆','🎸','🌈',
+]
+
+const BG_COLORS = [
+  '#4f46e5','#2563eb','#0891b2','#0d9488','#16a34a',
+  '#65a30d','#ca8a04','#ea580c','#dc2626','#db2777',
+  '#9333ea','#7c3aed','#475569','#1e293b',
+]
 
 /* ─── 계정 정보 ───────────────────────────────────────────── */
 function AccountSection() {
   const { user } = useAuth()
-  const [uploading, setUploading] = useState(false)
+  const [pickerOpen, setPickerOpen]   = useState(false)
+  const [pickerTab,  setPickerTab]    = useState<'emoji' | 'photo'>('emoji')
+  const [uploading,  setUploading]    = useState(false)
+  const [saving,     setSaving]       = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
-  const initial   = user?.email?.[0]?.toUpperCase() ?? '?'
+  const meta = user?.user_metadata ?? {}
+  const avatarUrl   = meta.avatar_url   as string | undefined
+  const avatarEmoji = meta.avatar_emoji as string | undefined
+  const avatarBg    = meta.avatar_bg    as string | undefined
+  const initial     = (meta.display_name as string | undefined)?.[0]
+                   ?? user?.email?.[0]
+                   ?? '?'
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [selEmoji, setSelEmoji] = useState(avatarEmoji ?? '')
+  const [selBg,    setSelBg]    = useState(avatarBg    ?? '#4f46e5')
+
+  async function applyEmoji() {
+    setSaving(true)
+    try {
+      const { supabase } = await import('../lib/supabase')
+      await supabase.auth.updateUser({ data: { avatar_emoji: selEmoji, avatar_bg: selBg, avatar_url: null } })
+      window.location.reload()
+    } catch (err) { alert((err as Error).message) }
+    finally { setSaving(false) }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !user) return
     setUploading(true)
@@ -28,51 +64,135 @@ function AccountSection() {
         .from('avatars').upload(path, file, { upsert: true, contentType: file.type })
       if (upErr) throw upErr
       const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.auth.updateUser({ data: { avatar_url: `${data.publicUrl}?t=${Date.now()}` } })
+      await supabase.auth.updateUser({
+        data: { avatar_url: `${data.publicUrl}?t=${Date.now()}`, avatar_emoji: null },
+      })
       window.location.reload()
     } catch (err) { alert((err as Error).message) }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = '' }
   }
 
-  const handleRemove = async () => {
+  async function handleRemove() {
     const { supabase } = await import('../lib/supabase')
-    await supabase.auth.updateUser({ data: { avatar_url: null } })
+    await supabase.auth.updateUser({ data: { avatar_url: null, avatar_emoji: null, avatar_bg: null } })
     window.location.reload()
   }
 
   return (
     <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
       <h2 className="flex items-center gap-2 text-base font-semibold text-content">
-        <User size={16} className="text-content-muted" />
-        계정 정보
+        <User size={16} className="text-content-muted" />계정 정보
       </h2>
 
-      {/* 프로필 사진 */}
+      {/* 프로필 아바타 */}
       <div className="flex items-center gap-4">
-        <div onClick={() => fileRef.current?.click()}
-          className="relative w-16 h-16 rounded-full overflow-hidden cursor-pointer group ring-2 ring-line hover:ring-primary transition-all shrink-0">
-          {avatarUrl
-            ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-            : <span className="flex w-full h-full items-center justify-center bg-primary text-white text-2xl font-bold">{initial}</span>}
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Upload size={18} className="text-white" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            className="flex items-center gap-2 px-3 py-1.5 border border-line rounded-lg text-sm text-content-muted hover:border-primary/40 hover:bg-primary-soft hover:text-primary transition-colors disabled:opacity-50">
-            <Upload size={13} />{uploading ? '업로드 중…' : '사진 변경'}
+        <button
+          onClick={() => setPickerOpen(true)}
+          className="relative shrink-0 group"
+          title="아바타 변경"
+        >
+          <UserAvatar
+            avatarUrl={avatarUrl} avatarEmoji={avatarEmoji} avatarBg={avatarBg}
+            initial={initial} size={64}
+            className="ring-2 ring-line group-hover:ring-primary transition-all"
+          />
+          <span className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Camera size={18} className="text-white" />
+          </span>
+        </button>
+
+        <div className="space-y-1.5">
+          <button onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 border border-line rounded-lg text-sm text-content-muted hover:border-primary/40 hover:bg-primary-soft hover:text-primary transition-colors">
+            <Camera size={13} />아바타 변경
           </button>
-          {avatarUrl && (
+          {(avatarUrl || avatarEmoji) && (
             <button onClick={handleRemove}
               className="flex items-center gap-2 px-3 py-1.5 border border-line rounded-lg text-sm text-content-muted hover:border-danger/40 hover:bg-danger-soft hover:text-danger transition-colors">
-              <X size={13} /> 사진 제거
+              <X size={13} />기본으로 초기화
             </button>
           )}
-          <p className="text-xs text-content-subtle">PNG, JPG, WebP · 최대 2MB</p>
         </div>
-        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" className="hidden" onChange={handleAvatarChange} />
       </div>
+
+      {/* 아바타 피커 모달 */}
+      {pickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPickerOpen(false)}>
+          <div className="bg-surface rounded-2xl shadow-modal border border-line w-[420px] p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-content">아바타 설정</h3>
+              <button onClick={() => setPickerOpen(false)} className="p-1 rounded-lg hover:bg-surface-hover">
+                <X size={15} className="text-content-muted" />
+              </button>
+            </div>
+
+            {/* 탭 */}
+            <div className="flex gap-1 border-b border-line">
+              {(['emoji', 'photo'] as const).map(t => (
+                <button key={t} onClick={() => setPickerTab(t)}
+                  className={`px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                    pickerTab === t ? 'border-primary text-primary' : 'border-transparent text-content-muted hover:text-content'
+                  }`}>
+                  {t === 'emoji' ? '🎨 이모지' : '📷 사진 업로드'}
+                </button>
+              ))}
+            </div>
+
+            {pickerTab === 'emoji' && (
+              <div className="space-y-4">
+                {/* 미리보기 */}
+                <div className="flex items-center gap-3">
+                  <UserAvatar avatarEmoji={selEmoji || undefined} avatarBg={selBg} initial={initial} size={56} />
+                  <span className="text-xs text-content-subtle">미리보기</span>
+                </div>
+
+                {/* 이모지 그리드 */}
+                <div>
+                  <p className="text-xs font-medium text-content-muted mb-2">이모지 선택</p>
+                  <div className="grid grid-cols-10 gap-1">
+                    {EMOJI_LIST.map(e => (
+                      <button key={e} onClick={() => setSelEmoji(e)}
+                        className={`text-xl p-1 rounded-lg transition-all hover:scale-125 ${selEmoji === e ? 'bg-primary-soft ring-2 ring-primary scale-110' : 'hover:bg-surface-hover'}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 배경색 */}
+                <div>
+                  <p className="text-xs font-medium text-content-muted mb-2">배경색</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {BG_COLORS.map(c => (
+                      <button key={c} onClick={() => setSelBg(c)}
+                        className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 relative"
+                        style={{ backgroundColor: c, borderColor: selBg === c ? '#fff' : 'transparent', outline: selBg === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={applyEmoji} disabled={!selEmoji || saving}
+                  className="w-full py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50">
+                  {saving ? '저장 중…' : '적용'}
+                </button>
+              </div>
+            )}
+
+            {pickerTab === 'photo' && (
+              <div className="space-y-4">
+                <p className="text-sm text-content-muted">PNG, JPG, WebP 이미지를 업로드하세요.</p>
+                <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-line hover:border-primary hover:bg-primary-soft/30 text-sm text-content-muted hover:text-primary transition-colors">
+                  <Upload size={16} />
+                  {uploading ? '업로드 중…' : '사진 선택'}
+                </button>
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handlePhotoUpload} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 max-w-md">
         <div>

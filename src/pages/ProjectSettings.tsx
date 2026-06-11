@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   Building2, Upload, X, Save, ChevronRight,
-  Palette, LayoutTemplate, FileText, CheckCircle2, Lock,
+  Palette, LayoutTemplate, FileText, CheckCircle2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProject, useProjects } from '../hooks/useProject'
@@ -88,8 +88,6 @@ export default function ProjectSettings() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
-  const [myRole, setMyRole] = useState<string | null>(null)
-  const isPM = myRole === 'pm'
 
   useEffect(() => {
     if (!project || initialized) return
@@ -102,13 +100,6 @@ export default function ProjectSettings() {
     }
     setInitialized(true)
   }, [project, initialized])
-
-  useEffect(() => {
-    if (!id || !user?.id) return
-    supabase.from('project_members').select('role')
-      .eq('project_id', id).eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => setMyRole(data?.role ?? null))
-  }, [id, user?.id])
 
   const patch = (partial: Partial<CoverConfig>) => setCfg(prev => ({ ...prev, ...partial }))
 
@@ -274,15 +265,7 @@ export default function ProjectSettings() {
             </div>
           </section>
 
-          {/* ── 표지 설정 (PM 전용) ── */}
-          {!isPM ? (
-            <section className="bg-surface border border-line rounded-xl p-6">
-              <div className="flex items-center gap-3 text-content-muted">
-                <Lock size={15} />
-                <span className="text-sm">표지 설정은 PM만 수정할 수 있습니다.</span>
-              </div>
-            </section>
-          ) : (
+          {/* ── 표지 설정 ── */}
           <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
             <h2 className="flex items-center gap-2 text-base font-semibold text-content">
               <FileText size={16} className="text-content-muted" />표지 설정
@@ -373,7 +356,6 @@ export default function ProjectSettings() {
                 </div>
             </div>
           </section>
-          )}
 
           {/* 저장 버튼 */}
           <div className="flex items-center gap-3">

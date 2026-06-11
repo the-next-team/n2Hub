@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Menu, Sun, Moon, ChevronRight, LogOut, Home, Bell, Check, ClipboardList, Plus, Send, Loader2 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
+import { UserAvatar } from '../UserAvatar'
 import { useProject } from '../../hooks/useProject'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useActionItems } from '../../hooks/useActionItems'
@@ -331,8 +332,11 @@ function UserMenu() {
     navigate('/login')
   }
 
-  const initial    = (displayName || user?.email || '?')[0].toUpperCase()
-  const avatarUrl  = user?.user_metadata?.avatar_url as string | undefined
+  const meta        = user?.user_metadata ?? {}
+  const initial     = (displayName || user?.email || '?')[0].toUpperCase()
+  const avatarUrl   = meta.avatar_url   as string | undefined
+  const avatarEmoji = meta.avatar_emoji as string | undefined
+  const avatarBg    = meta.avatar_bg    as string | undefined
 
   return (
     <div ref={ref} className="relative">
@@ -343,14 +347,11 @@ function UserMenu() {
         aria-expanded={open}
         className="flex items-center gap-2 rounded-lg p-1 pr-2 transition-colors hover:bg-surface-hover"
       >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="avatar"
-            className="h-7 w-7 rounded-full object-cover shrink-0 ring-2 ring-surface-hover" />
-        ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white shrink-0">
-            {initial}
-          </span>
-        )}
+        <UserAvatar
+          avatarUrl={avatarUrl} avatarEmoji={avatarEmoji} avatarBg={avatarBg}
+          initial={initial} size={28}
+          className="ring-2 ring-surface-hover"
+        />
         <span className="hidden flex-col items-start leading-tight sm:flex">
           <span className="max-w-[140px] truncate text-sm font-medium text-content">
             {displayName}
