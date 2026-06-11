@@ -381,9 +381,10 @@ export default function MemberManage() {
   const [addOk, setAddOk]         = useState(false)
   const [showForm, setShowForm]   = useState(false)
 
-  // 이메일 자동완성
+  // 이름/이메일 자동완성
   const [suggestions, setSuggestions] = useState<{ id: string; email: string; display_name: string | null }[]>([])
   const [showSuggest, setShowSuggest] = useState(false)
+  const [picked, setPicked]           = useState<{ id: string; email: string } | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef     = useRef<HTMLDivElement>(null)
 
@@ -404,7 +405,7 @@ export default function MemberManage() {
   }, [])
 
   const onEmailChange = (v: string) => {
-    setEmail(v); setSuggestions([]); setShowSuggest(false)
+    setEmail(v); setPicked(null); setSuggestions([]); setShowSuggest(false)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (v.length >= 2) {
       debounceRef.current = setTimeout(async () => {
@@ -413,8 +414,8 @@ export default function MemberManage() {
       }, 300)
     }
   }
-  const selectSuggestion = (p: { email: string; display_name: string | null }) => {
-    setEmail(p.email); setName(p.display_name ?? ''); setShowSuggest(false)
+  const selectSuggestion = (p: { id: string; email: string; display_name: string | null }) => {
+    setEmail(p.email); setName(p.display_name ?? ''); setPicked({ id: p.id, email: p.email }); setShowSuggest(false)
   }
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -422,13 +423,14 @@ export default function MemberManage() {
     if (!email.trim() || !name.trim()) return
     setAdding(true)
     try {
-      const found = await findUserByEmail(email)
-      if (!found) { setAddErr('해당 이메일로 가입된 계정이 없습니다.'); return }
+      // 자동완성에서 선택한 사용자 우선, 아니면 정확한 이메일로 조회
+      const found = picked ?? await findUserByEmail(email)
+      if (!found) { setAddErr('사용자를 찾을 수 없습니다. 이름을 입력한 경우 검색 목록에서 선택해주세요.'); return }
       await addMember(found.id, found.email, role, name, part || undefined, {
         projectName: project?.name ?? '프로젝트',
         inviterName: user?.email?.split('@')[0] ?? '팀원',
       })
-      setEmail(''); setName(''); setPart(''); setRole('developer'); setAddOk(true); setShowForm(false)
+      setEmail(''); setName(''); setPart(''); setRole('developer'); setPicked(null); setAddOk(true); setShowForm(false)
       setTimeout(() => setAddOk(false), 3000)
     } catch (err) { setAddErr((err as Error).message) }
     finally { setAdding(false) }
@@ -473,14 +475,14 @@ export default function MemberManage() {
           </h3>
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              {/* 이메일 */}
+              {/* 사용자 검색 (이름 또는 이메일) */}
               <div ref={wrapRef} className="relative col-span-2 sm:col-span-1">
-                <label className="block text-xs font-medium text-content-muted mb-1">이메일 *</label>
+                <label className="block text-xs font-medium text-content-muted mb-1">사용자 검색 *</label>
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
-                  <input type="email" value={email} onChange={e => onEmailChange(e.target.value)}
-                    placeholder="user@example.com" required className={inputCls + ' pl-8'} />
-                  {email && <button type="button" onClick={() => { setEmail(''); setSuggestions([]) }}
+                  <input type="text" value={email} onChange={e => onEmailChange(e.target.value)}
+                    placeholder="이름으로 검색 (예: 홍길동)" required className={inputCls + ' pl-8'} />
+                  {email && <button type="button" onClick={() => { setEmail(''); setSuggestions([]); setPicked(null) }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-subtle hover:text-content">
                     <X size={14} />
                   </button>}

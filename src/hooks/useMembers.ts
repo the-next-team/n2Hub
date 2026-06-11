@@ -122,8 +122,12 @@ export function useMembers(projectId: string) {
 
   const searchProfiles = useCallback(async (query: string) => {
     if (query.length < 2) return []
+    const q = query.replace(/[,%]/g, '').trim()   // or() 구문 깨짐 방지
+    if (!q) return []
+    // 이름 우선 검색 + 이메일도 함께 매칭
     const { data } = await supabase.from('profiles').select('id, email, display_name')
-      .ilike('email', `%${query}%`).limit(6)
+      .or(`display_name.ilike.%${q}%,email.ilike.%${q}%`)
+      .limit(6)
     return (data ?? []) as { id: string; email: string; display_name: string | null }[]
   }, [])
 
