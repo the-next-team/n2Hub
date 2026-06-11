@@ -6,7 +6,7 @@ export type MemberRole = 'pm' | 'pl' | 'developer' | 'qa'
 export const ROLE_CFG: Record<MemberRole, { label: string; color: string; desc: string }> = {
   pm:        { label: 'PM',    color: 'bg-purple-100 text-purple-700', desc: '프로젝트 매니저' },
   pl:        { label: 'PL',    color: 'bg-blue-100 text-blue-700',     desc: '프로젝트 리더'  },
-  developer: { label: '개발자', color: 'bg-emerald-100 text-emerald-700', desc: '개발자'       },
+  developer: { label: '팀원', color: 'bg-emerald-100 text-emerald-700', desc: '팀원'         },
   qa:        { label: 'QA',    color: 'bg-orange-100 text-orange-700', desc: 'QA 엔지니어'   },
 }
 
