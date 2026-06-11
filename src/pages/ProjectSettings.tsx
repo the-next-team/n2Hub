@@ -2,12 +2,13 @@ import { useRef, useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   Building2, Upload, X, Save, ChevronRight,
-  Palette, LayoutTemplate, FileText, CheckCircle2, RotateCcw,
+  Palette, LayoutTemplate, FileText, CheckCircle2, Lock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProject, useProjects } from '../hooks/useProject'
 import { useSettings, DEFAULT_COVER_CONFIG } from '../hooks/useSettings'
 import type { CoverConfig, Align } from '../hooks/useSettings'
+import { useAuth } from '../lib/auth'
 import CoverPage from '../components/CoverPage'
 import type { CoverMeta } from '../components/CoverPage'
 
@@ -70,6 +71,7 @@ export default function ProjectSettings() {
   const { project, loading } = useProject(id!)
   const { updateProject } = useProjects()
   const { settings } = useSettings()
+  const { user } = useAuth()
 
   /* 고객사 정보 */
   const [clientName,    setClientName]    = useState('')
@@ -78,22 +80,29 @@ export default function ProjectSettings() {
   const logoRef = useRef<HTMLInputElement>(null)
 
   /* 표지 설정 */
-  const [useProjectCover, setUseProjectCover] = useState(false)
   const [cfg, setCfg] = useState<CoverConfig>(DEFAULT_COVER_CONFIG)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [myRole, setMyRole] = useState<string | null>(null)
+  const isPM = myRole === 'pm'
 
   useEffect(() => {
     if (!project || initialized) return
     setClientName(project.clientName ?? '')
     setClientLogoUrl(project.logoUrl ?? '')
     if (project.coverConfig) {
-      setUseProjectCover(true)
       setCfg({ ...DEFAULT_COVER_CONFIG, ...(project.coverConfig as Partial<CoverConfig>) })
     }
     setInitialized(true)
   }, [project, initialized])
+
+  useEffect(() => {
+    if (!id || !user?.id) return
+    supabase.from('project_members').select('role')
+      .eq('project_id', id).eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setMyRole(data?.role ?? null))
+  }, [id, user?.id])
 
   const patch = (partial: Partial<CoverConfig>) => setCfg(prev => ({ ...prev, ...partial }))
 
@@ -129,7 +138,7 @@ export default function ProjectSettings() {
       await updateProject(id, {
         clientName,
         logoUrl:     clientLogoUrl || null,
-        coverConfig: useProjectCover ? (cfg as unknown as Record<string, unknown>) : null,
+        coverConfig: cfg as unknown as Record<string, unknown>,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -156,11 +165,7 @@ export default function ProjectSettings() {
     clientLogoUrl: clientLogoUrl || undefined,
   }
 
-  /* 미리보기용 settings: 글로벌 settings + 프로젝트 coverConfig */
-  const previewSettings = {
-    ...settings,
-    coverConfig: useProjectCover ? cfg : settings.coverConfig,
-  }
+  const previewSettings = { ...settings, coverConfig: cfg }
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -229,32 +234,21 @@ export default function ProjectSettings() {
             </div>
           </section>
 
-          {/* ── 표지 설정 ── */}
-          <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-semibold text-content">
-                <FileText size={16} className="text-content-muted" />표지 설정
-              </h2>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <span className="text-xs text-content-muted">프로젝트별 설정 사용</span>
-                <div
-                  onClick={() => setUseProjectCover(p => !p)}
-                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${useProjectCover ? 'bg-primary' : 'bg-line'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${useProjectCover ? 'translate-x-4' : ''}`} />
-                </div>
-              </label>
-            </div>
-
-            {!useProjectCover && (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-canvas border border-line text-sm text-content-muted">
-                <RotateCcw size={13} />
-                글로벌 설정({'/설정 → 표지 설정'})을 사용 중입니다. 위 토글로 프로젝트별 설정을 활성화하세요.
+          {/* ── 표지 설정 (PM 전용) ── */}
+          {!isPM ? (
+            <section className="bg-surface border border-line rounded-xl p-6">
+              <div className="flex items-center gap-3 text-content-muted">
+                <Lock size={15} />
+                <span className="text-sm">표지 설정은 PM만 수정할 수 있습니다.</span>
               </div>
-            )}
+            </section>
+          ) : (
+          <section className="bg-surface border border-line rounded-xl p-6 space-y-5">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-content">
+              <FileText size={16} className="text-content-muted" />표지 설정
+            </h2>
 
-            {useProjectCover && (
-              <div className="space-y-5">
+            <div className="space-y-5">
                 {/* 레이아웃 */}
                 <div className="space-y-3">
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-content">
@@ -337,9 +331,9 @@ export default function ProjectSettings() {
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
+            </div>
           </section>
+          )}
 
           {/* 저장 버튼 */}
           <div className="flex items-center gap-3">
