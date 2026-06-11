@@ -20,7 +20,7 @@ import {
   PanelLeftClose, PanelLeft, X,
   ChevronRight, ChevronDown, Folder, FolderOpen,
   ClipboardList, Users, Plus, Loader2, BarChart2, AlertCircle, CalendarDays, Activity, SearchCode,
-  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation, Mic, Shield,
+  GripVertical, Star, StickyNote, FileSpreadsheet, Presentation, Mic, Shield, SlidersHorizontal,
 } from 'lucide-react'
 
 /* ── 파일 타입별 아이콘 (사이드바용) ── */
@@ -49,7 +49,8 @@ const ALL_NAV_ITEMS: NavItemDef[] = [
   { key: 'issues',    icon: AlertCircle, label: '이슈 관리'    },
   { key: 'calendar',  icon: CalendarDays,label: '캘린더'       },
   { key: 'activity',  icon: Activity,    label: '활동 로그'    },
-  { key: 'members',   icon: Users,       label: '멤버 관리'    },
+  { key: 'members',   icon: Users,            label: '멤버 관리'    },
+  { key: 'settings',  icon: SlidersHorizontal, label: '프로젝트 설정' },
 ]
 const DEFAULT_ORDER = ALL_NAV_ITEMS.map(i => i.key)
 const NAV_ORDER_KEY = 'n2hub-nav-order'

@@ -69,6 +69,7 @@ export interface Project {
   systemName:  string | null
   logoUrl:     string | null
   themeColor:  string | null
+  coverConfig: Record<string, unknown> | null
 }
 
 export interface Document {

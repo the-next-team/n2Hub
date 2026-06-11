@@ -13,7 +13,7 @@ type CreateProjectInput = {
   themeColor: string | null
 }
 
-type UpdateProjectInput = Partial<CreateProjectInput> & { logoUrl?: string | null }
+type UpdateProjectInput = Partial<CreateProjectInput> & { logoUrl?: string | null; coverConfig?: Record<string, unknown> | null }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapProject(row: any): Project {
@@ -31,6 +31,7 @@ function mapProject(row: any): Project {
     systemName:  row.system_name || null,
     logoUrl:     row.logo_url || null,
     themeColor:  row.theme_color || null,
+    coverConfig: row.cover_config ?? null,
   }
 }
 
@@ -88,6 +89,7 @@ export function useProjects() {
     if (input.systemName  !== undefined) patch.system_name = input.systemName  || null
     if (input.themeColor  !== undefined) patch.theme_color = input.themeColor  || null
     if (input.logoUrl     !== undefined) patch.logo_url    = input.logoUrl     || null
+    if (input.coverConfig !== undefined) patch.cover_config = input.coverConfig ?? null
 
     const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single()
     if (error) throw error

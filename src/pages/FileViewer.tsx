@@ -142,9 +142,10 @@ export default function FileViewer() {
   const [buffer, setBuffer]           = useState<ArrayBuffer | null>(null)
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
-  const [projectName,    setProjectName]    = useState<string>('')
-  const [clientName,     setClientName]     = useState<string>('')
-  const [clientLogoUrl,  setClientLogoUrl]  = useState<string>('')
+  const [projectName,       setProjectName]       = useState<string>('')
+  const [clientName,        setClientName]        = useState<string>('')
+  const [clientLogoUrl,     setClientLogoUrl]     = useState<string>('')
+  const [projectCoverConfig, setProjectCoverConfig] = useState<Record<string, unknown> | null>(null)
   const [withCover, setWithCover]     = useState(false)  // 레거시 (미사용)
   const [signedUrl, setSignedUrl]     = useState<string | null>(null)
   const { settings } = useSettings()
@@ -292,12 +293,13 @@ export default function FileViewer() {
 
   useEffect(() => {
     if (!projectId) return
-    supabase.from('projects').select('name, client_name, logo_url').eq('id', projectId).single()
+    supabase.from('projects').select('name, client_name, logo_url, cover_config').eq('id', projectId).single()
       .then(({ data }) => {
         if (data) {
           setProjectName(data.name ?? '')
           setClientName(data.client_name ?? '')
           setClientLogoUrl(data.logo_url ?? '')
+          setProjectCoverConfig(data.cover_config ?? null)
         }
       })
     // 현재 사용자의 역할 가져오기
@@ -340,8 +342,11 @@ export default function FileViewer() {
       }
     } catch { /* 변환 실패 시 빈 본문 */ }
 
-    // 표지 HTML 생성 (CoverPage 구조를 직접 조립)
-    const cfg  = settings.coverConfig
+    // 표지 HTML 생성 (프로젝트별 설정 우선, 없으면 글로벌)
+    const { DEFAULT_COVER_CONFIG } = await import('../hooks/useSettings')
+    const cfg  = projectCoverConfig
+      ? { ...DEFAULT_COVER_CONFIG, ...(projectCoverConfig as Partial<typeof DEFAULT_COVER_CONFIG>) }
+      : settings.coverConfig
     const ac   = cfg?.accentColor ?? '#111827'
     const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 

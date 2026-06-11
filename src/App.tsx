@@ -14,6 +14,7 @@ import IssueBoard from './pages/IssueBoard'
 import CalendarView from './pages/CalendarView'
 import ActivityLog from './pages/ActivityLog'
 import MemberManage from './pages/MemberManage'
+import ProjectSettings from './pages/ProjectSettings'
 import TemplateManager from './pages/TemplateManager'
 import AISearch from './pages/AISearch'
 import SprintBoard from './pages/SprintBoard'
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/projects/:id/calendar" element={<CalendarView />} />
               <Route path="/projects/:id/activity" element={<ActivityLog />} />
               <Route path="/projects/:id/members" element={<MemberManage />} />
+              <Route path="/projects/:id/settings" element={<ProjectSettings />} />
               <Route path="/documents/:docId" element={<DocumentEditor />} />
               <Route path="/templates" element={<TemplateManager />} />
               <Route path="/settings" element={<Settings />} />
