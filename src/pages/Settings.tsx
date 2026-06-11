@@ -1,17 +1,11 @@
 import { useRef, useState } from 'react'
 import {
-  User, Building2, Upload, X, Save,
-  AlertCircle, CheckCircle2, FileText, Palette, LayoutTemplate,
+  User, Building2, Upload, X, Save, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import { PageHeader } from '../components/ui'
-import { useSettings, DEFAULT_COVER_CONFIG } from '../hooks/useSettings'
-import type { CoverStyle, CoverConfig, Align } from '../hooks/useSettings'
+import { useSettings } from '../hooks/useSettings'
+import type { CoverStyle } from '../hooks/useSettings'
 import { useAuth } from '../lib/auth'
-import CoverPage from '../components/CoverPage'
-import type { CoverMeta } from '../components/CoverPage'
-
-/* ─── 탭 타입 ─────────────────────────────────────────────── */
-type Tab = 'workspace' | 'cover'
 
 /* ─── 계정 정보 ───────────────────────────────────────────── */
 function AccountSection() {
@@ -402,37 +396,13 @@ function CoverSection() {
 
 /* ─── 페이지 ──────────────────────────────────────────────── */
 export default function Settings() {
-  const [tab, setTab] = useState<Tab>('workspace')
-
   return (
     <div className="p-8 max-w-3xl">
-      <PageHeader title="설정" description="워크스페이스 정보와 표지 양식을 설정하세요." />
-
-      {/* 탭 */}
-      <div className="flex gap-1 mb-6 border-b border-line">
-        {([
-          { key: 'workspace', label: '워크스페이스', icon: Building2 },
-          { key: 'cover',     label: '표지 설정',    icon: FileText  },
-        ] as const).map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === key
-                ? 'border-primary text-primary'
-                : 'border-transparent text-content-muted hover:text-content'
-            }`}>
-            <Icon size={15} />{label}
-          </button>
-        ))}
+      <PageHeader title="설정" description="워크스페이스 정보를 설정하세요." />
+      <div className="space-y-4">
+        <WorkspaceSection />
+        <AccountSection />
       </div>
-
-      {tab === 'workspace' && (
-        <div className="space-y-4">
-          <WorkspaceSection />
-          <AccountSection />
-        </div>
-      )}
-
-      {tab === 'cover' && <CoverSection />}
     </div>
   )
 }
