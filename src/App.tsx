@@ -1,5 +1,36 @@
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[AppErrorBoundary] caught:', error, info.componentStack)
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'monospace' }}>
+          <h2 style={{ color: '#dc2626' }}>렌더링 오류 발생</h2>
+          <pre style={{ background: '#fef2f2', padding: 16, borderRadius: 8, whiteSpace: 'pre-wrap', color: '#991b1b', fontSize: 13 }}>
+            {this.state.error.message}
+            {'\n\n'}
+            {this.state.error.stack}
+          </pre>
+          <button onClick={() => { this.setState({ error: null }); window.location.href = '/dashboard' }}
+            style={{ marginTop: 16, padding: '8px 20px', background: '#4f46e5', color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+            대시보드로 이동
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 import { UploadProvider } from './contexts/UploadContext'
 import Layout from './components/layout/Layout'
 import Dashboard from './pages/Dashboard'
@@ -45,6 +76,7 @@ function GuestRoute() {
 
 export default function App() {
   return (
+    <AppErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
       <UploadProvider>
@@ -81,5 +113,6 @@ export default function App() {
       </UploadProvider>
       </AuthProvider>
     </BrowserRouter>
+    </AppErrorBoundary>
   )
 }
