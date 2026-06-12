@@ -236,48 +236,55 @@ export default function OnlyOfficeEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId, signedUrl])
 
+  // React의 조건부 렌더링({cond && <div>})은 DOM에 노드를 insertBefore로 삽입/제거함.
+  // OO가 동일 부모 DOM을 이미 조작한 상태에서 이 작업이 발생하면
+  // "insertBefore: not a child of this node" 에러로 React 트리 전체가 크래시됨.
+  // → style.display로 show/hide 처리하여 DOM 구조를 고정.
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      {/* 로딩 오버레이 */}
-      {status === 'loading' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white gap-3">
-          <Loader2 size={32} className="animate-spin text-primary" />
-          <p className="text-sm text-gray-500">OnlyOffice 에디터 로딩 중…</p>
-        </div>
-      )}
+      {/* 로딩 오버레이 — 항상 존재, display로 토글 */}
+      <div
+        style={{ display: status === 'loading' ? 'flex' : 'none' }}
+        className="absolute inset-0 z-10 flex-col items-center justify-center bg-white gap-3"
+      >
+        <Loader2 size={32} className="animate-spin text-primary" />
+        <p className="text-sm text-gray-500">OnlyOffice 에디터 로딩 중…</p>
+      </div>
 
-      {/* 에러 */}
-      {status === 'error' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white gap-4 px-6">
-          <AlertCircle size={36} className="text-red-400" />
-          <p className="text-sm text-red-600 text-center whitespace-pre-line max-w-sm">{errMsg}</p>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            뒤로 가기
-          </button>
-        </div>
-      )}
+      {/* 에러 오버레이 — 항상 존재, display로 토글 */}
+      <div
+        style={{ display: status === 'error' ? 'flex' : 'none' }}
+        className="absolute inset-0 z-10 flex-col items-center justify-center bg-white gap-4 px-6"
+      >
+        <AlertCircle size={36} className="text-red-400" />
+        <p className="text-sm text-red-600 text-center whitespace-pre-line max-w-sm">{errMsg}</p>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          뒤로 가기
+        </button>
+      </div>
 
-      {/* 저장 상태 표시 */}
-      {saveState !== 'idle' && (
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-md bg-white border border-gray-200">
-          {saveState === 'saving' ? (
-            <>
-              <Loader2 size={12} className="animate-spin text-blue-500" />
-              <span className="text-gray-600">저장 중...</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 size={12} className="text-green-500" />
-              <span className="text-gray-600">저장 완료</span>
-            </>
-          )}
-        </div>
-      )}
+      {/* 저장 상태 표시 — 항상 존재, display로 토글 */}
+      <div
+        style={{ display: saveState !== 'idle' ? 'flex' : 'none' }}
+        className="absolute top-3 right-3 z-20 items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-md bg-white border border-gray-200"
+      >
+        {saveState === 'saving' ? (
+          <>
+            <Loader2 size={12} className="animate-spin text-blue-500" />
+            <span className="text-gray-600">저장 중...</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle2 size={12} className="text-green-500" />
+            <span className="text-gray-600">저장 완료</span>
+          </>
+        )}
+      </div>
 
-      {/* OnlyOffice 마운트 포인트 — 항상 DOM에 존재해야 함 */}
+      {/* OnlyOffice 마운트 포인트 — 항상 DOM에 존재, React가 자식 관리 안 함 */}
       <div
         id={CONTAINER_ID}
         style={{ width: '100%', flex: 1 }}
