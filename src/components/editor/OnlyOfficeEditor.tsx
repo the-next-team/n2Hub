@@ -54,9 +54,27 @@ export default function OnlyOfficeEditor({
     setSaveState('saving')
     for (const row of rows) {
       try {
+        // OO 임시 URL은 편집 세션 종료 후 만료됨 → 10분 초과시 처리 불가
+        const ageMs = row.created_at
+          ? Date.now() - new Date(row.created_at).getTime()
+          : Infinity
+        if (ageMs > 10 * 60 * 1000) {
+          await supabase.from('file_save_queue').delete().eq('id', row.id)
+          console.warn('[OO Save] expired queue item deleted:', row.id)
+          continue
+        }
+
         const fileResp = await fetch(row.oo_url)
         if (!fileResp.ok) throw new Error(`OO fetch failed: ${fileResp.status}`)
-        const buffer = await fileResp.arrayBuffer()
+
+        // 만료된 URL이 HTML 오류 페이지를 반환하는 경우 방지
+        const respCt = fileResp.headers.get('content-type') ?? ''
+        if (respCt.includes('text/html')) {
+          throw new Error('OO returned HTML (session expired)')
+        }
+
+        const fileBuffer = await fileResp.arrayBuffer()
+        if (fileBuffer.byteLength === 0) throw new Error('OO returned empty file')
 
         const ext = fileName.split('.').pop()?.toLowerCase() ?? 'docx'
         const mimeMap: Record<string, string> = {
@@ -71,15 +89,16 @@ export default function OnlyOfficeEditor({
 
         const { error: uploadErr } = await supabase.storage
           .from('documents')
-          .upload(storagePath, buffer, { contentType, upsert: true })
+          .upload(storagePath, fileBuffer, { contentType, upsert: true })
 
         if (uploadErr) throw uploadErr
 
-        // 처리 완료 → 큐에서 삭제
         await supabase.from('file_save_queue').delete().eq('id', row.id)
         console.log('[OO Save] saved via browser:', storagePath)
       } catch (err) {
         console.error('[OO Save] failed for queue row', row.id, err)
+        // OO URL은 세션 종료시 만료 → 재시도 불가, 큐에서 제거
+        try { await supabase.from('file_save_queue').delete().eq('id', row.id) } catch { /* ignore */ }
       }
     }
     setSaveState('saved')
@@ -104,8 +123,8 @@ export default function OnlyOfficeEditor({
       )
       .subscribe()
 
-    // 3. 폴백 폴링 (Realtime 미작동 대비, 5초마다)
-    pollTimer = setInterval(processSaveQueue, 5000)
+    // 3. 폴백 폴링 (Realtime 미작동 대비, 30초마다)
+    pollTimer = setInterval(processSaveQueue, 30000)
 
     return () => {
       supabase.removeChannel(channel)
@@ -203,8 +222,16 @@ export default function OnlyOfficeEditor({
 
     return () => {
       active = false
-      instanceRef.current?.destroyEditor()
-      instanceRef.current = null
+      if (instanceRef.current) {
+        instanceRef.current.destroyEditor()
+        instanceRef.current = null
+      }
+      // OO 스크립트와 전역 상태 제거 → 재오픈 시 충돌 방지
+      // SPA 내비게이션으로 컴포넌트가 언마운트/리마운트될 때
+      // window.DocsAPI가 남아있으면 새 인스턴스 생성 시 상태 충돌 가능
+      const ooScript = document.getElementById('onlyoffice-api-js')
+      if (ooScript) ooScript.remove()
+      if (window.DocsAPI) delete window.DocsAPI
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId, signedUrl])
