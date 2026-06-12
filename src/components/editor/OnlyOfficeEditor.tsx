@@ -37,7 +37,7 @@ export default function OnlyOfficeEditor({
   const instanceRef = useRef<{ destroyEditor: () => void } | null>(null)
   const [status, setStatus]   = useState<'loading' | 'ready' | 'error'>('loading')
   const [errMsg, setErrMsg]   = useState('')
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   // ── 브라우저 쪽 저장 처리 ──────────────────────────────────────────────────
   // Supabase 클라우드 Edge Function은 사내 OnlyOffice IP에 접근 불가
@@ -52,26 +52,28 @@ export default function OnlyOfficeEditor({
     if (error || !rows || rows.length === 0) return
 
     setSaveState('saving')
+    let savedOk = false
+
     for (const row of rows) {
       try {
-        // OO 임시 URL은 편집 세션 종료 후 만료됨 → 10분 초과시 처리 불가
-        const ageMs = row.created_at
-          ? Date.now() - new Date(row.created_at).getTime()
-          : Infinity
-        if (ageMs > 10 * 60 * 1000) {
+        // OO URL의 expires 파라미터(Unix 초)로 만료 판정
+        // 고정 시간(10분) 대신 URL 자체 만료 시각을 사용
+        const expiresMatch = (row.oo_url as string).match(/[?&]expires=(\d+)/)
+        const expiresAtMs = expiresMatch ? parseInt(expiresMatch[1]) * 1000 : null
+        if (expiresAtMs && Date.now() > expiresAtMs) {
+          console.warn('[OO Save] URL expired, dropping queue item:', row.id)
           await supabase.from('file_save_queue').delete().eq('id', row.id)
-          console.warn('[OO Save] expired queue item deleted:', row.id)
           continue
         }
 
-        const fileResp = await fetch(row.oo_url)
-        if (!fileResp.ok) throw new Error(`OO fetch failed: ${fileResp.status}`)
+        // CORS 우회: nginx /oo-proxy/ 를 통해 same-origin 요청으로 변환
+        // http://211.191.65.14:8090/cache/... → /oo-proxy/cache/...
+        const proxyUrl = (row.oo_url as string).replace(/^https?:\/\/[^/]+/, '/oo-proxy')
+        const fileResp = await fetch(proxyUrl)
+        if (!fileResp.ok) throw new Error(`OO proxy fetch failed: ${fileResp.status}`)
 
-        // 만료된 URL이 HTML 오류 페이지를 반환하는 경우 방지
         const respCt = fileResp.headers.get('content-type') ?? ''
-        if (respCt.includes('text/html')) {
-          throw new Error('OO returned HTML (session expired)')
-        }
+        if (respCt.includes('text/html')) throw new Error('OO returned HTML (URL invalid)')
 
         const fileBuffer = await fileResp.arrayBuffer()
         if (fileBuffer.byteLength === 0) throw new Error('OO returned empty file')
@@ -94,15 +96,23 @@ export default function OnlyOfficeEditor({
         if (uploadErr) throw uploadErr
 
         await supabase.from('file_save_queue').delete().eq('id', row.id)
-        console.log('[OO Save] saved via browser:', storagePath)
+        console.log('[OO Save] saved via proxy:', storagePath)
+        savedOk = true
       } catch (err) {
         console.error('[OO Save] failed for queue row', row.id, err)
-        // OO URL은 세션 종료시 만료 → 재시도 불가, 큐에서 제거
+        setSaveState('error')
+        setTimeout(() => setSaveState('idle'), 4000)
         try { await supabase.from('file_save_queue').delete().eq('id', row.id) } catch { /* ignore */ }
+        return // 실패 시 즉시 종료
       }
     }
-    setSaveState('saved')
-    setTimeout(() => setSaveState('idle'), 3000)
+
+    if (savedOk) {
+      setSaveState('saved')
+      setTimeout(() => setSaveState('idle'), 3000)
+    } else {
+      setSaveState('idle') // 만료된 항목만 정리됐을 때 false positive 방지
+    }
   }, [storagePath, fileName])
 
   // 파일 열릴 때 미처리 큐 체크 + Realtime 구독
@@ -123,8 +133,8 @@ export default function OnlyOfficeEditor({
       )
       .subscribe()
 
-    // 3. 폴백 폴링 (Realtime 미작동 대비, 30초마다)
-    pollTimer = setInterval(processSaveQueue, 30000)
+    // 3. 폴백 폴링 (Realtime 미작동 대비, 5초마다)
+    pollTimer = setInterval(processSaveQueue, 5000)
 
     return () => {
       supabase.removeChannel(channel)
@@ -275,6 +285,11 @@ export default function OnlyOfficeEditor({
           <>
             <Loader2 size={12} className="animate-spin text-blue-500" />
             <span className="text-gray-600">저장 중...</span>
+          </>
+        ) : saveState === 'error' ? (
+          <>
+            <AlertCircle size={12} className="text-red-500" />
+            <span className="text-red-600">저장 실패</span>
           </>
         ) : (
           <>
