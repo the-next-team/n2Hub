@@ -248,43 +248,57 @@ export default function FileViewer() {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setSignedUrl(null)  // 재오픈 시 이전 signedUrl 초기화
+    setBuffer(null)
 
     ;(async () => {
-      const { data: row, error: dbErr } = await supabase
-        .from('files')
-        .select('*')
-        .eq('id', fileId)
-        .single()
+      try {
+        const { data: row, error: dbErr } = await supabase
+          .from('files')
+          .select('*')
+          .eq('id', fileId)
+          .single()
 
-      if (dbErr || !row) {
-        if (!cancelled) { setError('파일 정보를 불러올 수 없습니다.'); setLoading(false) }
-        return
-      }
+        if (dbErr || !row) {
+          if (!cancelled) { setError(`파일 정보를 불러올 수 없습니다. (${dbErr?.message ?? 'no data'})`); setLoading(false) }
+          return
+        }
 
-      if (cancelled) return
-      setMeta(row as FileMeta)
+        if (cancelled) return
+        setMeta(row as FileMeta)
 
-      const ft = getFileType(row.original_name, row.mime_type)
-      const needsSignedUrl = ft === 'docx' || ft === 'xlsx' || ft === 'pptx'
+        const ft = getFileType(row.original_name, row.mime_type)
+        const needsSignedUrl = ft === 'docx' || ft === 'xlsx' || ft === 'pptx'
 
-      const [blobResult, signedResult] = await Promise.all([
-        supabase.storage.from('documents').download(row.storage_path),
-        needsSignedUrl
-          ? supabase.storage.from('documents').createSignedUrl(row.storage_path, 7200)
-          : Promise.resolve({ data: null, error: null }),
-      ])
+        const [blobResult, signedResult] = await Promise.all([
+          supabase.storage.from('documents').download(row.storage_path),
+          needsSignedUrl
+            ? supabase.storage.from('documents').createSignedUrl(row.storage_path, 7200)
+            : Promise.resolve({ data: null, error: null }),
+        ])
 
-      const { data: blob, error: dlErr } = blobResult
-      if (dlErr || !blob) {
-        if (!cancelled) { setError('파일을 다운로드할 수 없습니다.'); setLoading(false) }
-        return
-      }
+        const { data: blob, error: dlErr } = blobResult
+        if (dlErr || !blob) {
+          if (!cancelled) { setError(`파일을 다운로드할 수 없습니다. (${dlErr?.message ?? 'no blob'})`); setLoading(false) }
+          return
+        }
 
-      if (!cancelled) {
-        setBuffer(await blob.arrayBuffer())
+        const signedErr = (signedResult as { data: unknown; error: { message?: string } | null }).error
         const su = (signedResult as { data?: { signedUrl?: string } | null }).data?.signedUrl
-        if (su) setSignedUrl(su)
-        setLoading(false)
+        if (needsSignedUrl && !su) {
+          console.error('[FileViewer] createSignedUrl failed:', signedErr)
+          if (!cancelled) { setError(`에디터 URL 생성 실패. (${signedErr?.message ?? 'unknown'})`); setLoading(false) }
+          return
+        }
+
+        if (!cancelled) {
+          setBuffer(await blob.arrayBuffer())
+          if (su) setSignedUrl(su)
+          setLoading(false)
+        }
+      } catch (e) {
+        console.error('[FileViewer] load error:', e)
+        if (!cancelled) { setError(`파일 로드 오류: ${(e as Error).message}`); setLoading(false) }
       }
     })()
 
