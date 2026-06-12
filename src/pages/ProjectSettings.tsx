@@ -87,19 +87,23 @@ export default function ProjectSettings() {
   const [cfg, setCfg] = useState<CoverConfig>(DEFAULT_COVER_CONFIG)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [initialized, setInitialized] = useState(false)
+  // 프로젝트 ID별로 초기화 추적 — boolean 대신 id를 저장해야
+  // A→B 내비게이션 시 id가 바뀌면 자동으로 B의 데이터로 재초기화됨
+  const [initializedId, setInitializedId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!project || initialized) return
+    if (!project || initializedId === id) return
     setSystemCode(project.systemCode ?? '')
     setSystemName(project.systemName ?? '')
     setClientName(project.clientName ?? '')
     setClientLogoUrl(project.logoUrl ?? '')
-    if (project.coverConfig) {
-      setCfg({ ...DEFAULT_COVER_CONFIG, ...(project.coverConfig as Partial<CoverConfig>) })
-    }
-    setInitialized(true)
-  }, [project, initialized])
+    setCfg(
+      project.coverConfig
+        ? { ...DEFAULT_COVER_CONFIG, ...(project.coverConfig as Partial<CoverConfig>) }
+        : DEFAULT_COVER_CONFIG
+    )
+    setInitializedId(id ?? null)
+  }, [project, initializedId, id])
 
   const patch = (partial: Partial<CoverConfig>) => setCfg(prev => ({ ...prev, ...partial }))
 

@@ -495,7 +495,10 @@ export default function FileViewer() {
   const handleAddCoverSheet = async () => {
     if (!buffer || !meta) return
 
-    const cfg   = settings.coverConfig
+    const { DEFAULT_COVER_CONFIG } = await import('../hooks/useSettings')
+    const cfg = projectCoverConfig
+      ? { ...DEFAULT_COVER_CONFIG, ...(projectCoverConfig as Partial<typeof DEFAULT_COVER_CONFIG>) }
+      : settings.coverConfig
     const ac    = cfg?.accentColor ?? '#111827'
     const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
