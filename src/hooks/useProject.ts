@@ -105,6 +105,8 @@ export function useProject(id: string) {
 
   useEffect(() => {
     if (!id) return
+    setProject(null)
+    setLoading(true)
     supabase.from('projects').select('*').eq('id', id).single().then(({ data }) => {
       if (data) setProject(mapProject(data))
       setLoading(false)
