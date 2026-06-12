@@ -92,7 +92,7 @@ export default function ProjectSettings() {
   const [initializedId, setInitializedId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!project || initializedId === id) return
+    if (!project || project.id !== id || initializedId === id) return
     setSystemCode(project.systemCode ?? '')
     setSystemName(project.systemName ?? '')
     setClientName(project.clientName ?? '')
