@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 
 declare global {
   interface Window {
@@ -22,7 +23,6 @@ interface Props {
 }
 
 const OO_SERVER   = import.meta.env.VITE_ONLYOFFICE_SERVER ?? 'http://211.191.65.29:8090'
-const CALLBACK_FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onlyoffice-callback`
 const CONTAINER_ID = 'onlyoffice-editor-root'
 
 export default function OnlyOfficeEditor({
@@ -42,14 +42,16 @@ export default function OnlyOfficeEditor({
     setStatus('loading')
     setErrMsg('')
 
-    const init = () => {
+    const init = async () => {
       if (!active || !window.DocsAPI) return
 
-      const ext         = fileName.split('.').pop()?.toLowerCase() ?? 'docx'
-      const callbackUrl = `${CALLBACK_FN}?path=${encodeURIComponent(storagePath)}`
+      const ext = fileName.split('.').pop()?.toLowerCase() ?? 'docx'
 
       try {
-        instanceRef.current = new window.DocsAPI.DocEditor(CONTAINER_ID, {
+        // 편집기 설정은 서버(Edge Function)에서 권한 확인 후 서명해서 돌려줍니다.
+        // 저장 주소(callbackUrl)도 서버가 채웁니다.
+        const { data: signed, error: signErr } = await supabase.functions.invoke('onlyoffice-sign', {
+          body: { storagePath, config: {
           document: {
             fileType: ext,
             key: `${fileId}-${Date.now()}`,
@@ -59,7 +61,6 @@ export default function OnlyOfficeEditor({
           },
           editorConfig: {
             mode: 'edit',
-            callbackUrl,
             lang: 'ko',
             user: {
               id: user?.id ?? 'guest',
@@ -74,6 +75,15 @@ export default function OnlyOfficeEditor({
           type: 'desktop',
           height: '100%',
           width: '100%',
+          } },
+        })
+        if (signErr || !signed?.config) {
+          throw new Error(signed?.error ?? signErr?.message ?? '편집기 설정 서명 실패')
+        }
+        if (!active) return
+
+        instanceRef.current = new window.DocsAPI.DocEditor(CONTAINER_ID, {
+          ...signed.config,
           events: {
             onAppReady: () => { if (active) setStatus('ready') },
             onRequestClose: onClose,
