@@ -69,9 +69,9 @@ export default function Login() {
         {/* 로고 */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white font-bold text-lg">
-            n2
+            D
           </div>
-          <span className="text-white text-xl font-bold">n2Hub</span>
+          <span className="text-white text-xl font-bold">더그아웃<span className="ml-1.5 text-[11px] font-medium opacity-60">by NEXT</span></span>
         </div>
 
         {/* 메인 카피 */}
@@ -107,8 +107,8 @@ export default function Login() {
 
           {/* 모바일 로고 */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">n2</div>
-            <span className="text-lg font-bold text-content">n2Hub</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">D</div>
+            <span className="text-lg font-bold text-content">더그아웃<span className="ml-1.5 text-[11px] font-medium opacity-60">by NEXT</span></span>
           </div>
 
           {/* 제목 */}
