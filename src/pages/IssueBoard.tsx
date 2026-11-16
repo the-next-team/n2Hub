@@ -329,7 +329,7 @@ function KanbanColumn({
   onDragStart, onDrop, onCardClick, onAddClick,
 }: {
   status: IssueStatus; issues: Issue[]; draggingId: string | null
-  commentCounts: Record<string, number>
+  commentCounts: Map<string, number>
   onDragStart: (id: string) => void; onDrop: (newStatus: IssueStatus) => void
   onCardClick: (issue: Issue) => void; onAddClick: (status: IssueStatus) => void
 }) {
@@ -362,7 +362,7 @@ function KanbanColumn({
           <IssueCard
             key={issue.id}
             issue={issue}
-            commentCount={commentCounts[issue.id] ?? 0}
+            commentCount={commentCounts.get(issue.id) ?? 0}
             onDragStart={onDragStart}
             onClick={() => onCardClick(issue)}
           />
@@ -527,7 +527,7 @@ function IssueDetailPanel({
 
             <div className="border-t border-line pt-4">
               <p className="text-xs font-semibold text-content-muted mb-3">댓글</p>
-              <CommentThread projectId={projectId} entityType="issue" entityId={issue.id} />
+              <CommentThread projectId={projectId} targetType="issue" targetId={issue.id} />
             </div>
           </div>
         </div>
@@ -748,7 +748,7 @@ export default function IssueBoard() {
             </p>
             {issues.length === 0 && (
               <button
-                onClick={openCreate}
+                onClick={() => openCreate()}
                 className="mt-3 text-xs text-primary hover:underline"
               >
                 첫 이슈를 추가해보세요

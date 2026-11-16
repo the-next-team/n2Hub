@@ -155,7 +155,7 @@ pnpm add -D @esbuild/win32-x64
 
 ```bash
 # Supabase
-VITE_SUPABASE_URL=https://lakiodyzpecidhmadbgy.supabase.co
+VITE_SUPABASE_URL=https://uoanytugqomuofhjwpkj.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_SHnsFWTQqUlZemylzYSzCQ_nMMNWf-7
 
 # Anthropic Claude API (선택, 백엔드에서 처리 권장)

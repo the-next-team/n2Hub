@@ -624,11 +624,15 @@ export default function FileViewer() {
 
     // 표지 이미지 전체 시트 가득 삽입
     const imgId = wb.addImage({ buffer: u8.buffer, extension: 'png' })
-    cover.addImage(imgId, { tl: { col: 0, row: 0 }, br: { col: 10, row: 55 }, editAs: 'absolute' })
+    cover.addImage(imgId, {
+      tl: { col: 0, row: 0 } as import('exceljs').Anchor,
+      br: { col: 10, row: 55 } as import('exceljs').Anchor,
+      editAs: 'absolute',
+    })
 
     // 원본 시트 복사
     origWb.eachSheet(os => {
-      const ns = wb.addWorksheet(os.name, { state: os.state as ExcelJS.WorksheetState })
+      const ns = wb.addWorksheet(os.name, { state: os.state as import('exceljs').WorksheetState })
       os.eachRow((row, rn) => {
         const nr = ns.getRow(rn)
         row.eachCell({ includeEmpty: true }, (cell, cn) => { nr.getCell(cn).value = cell.value })

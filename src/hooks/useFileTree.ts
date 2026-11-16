@@ -197,9 +197,6 @@ export function useFileTree(projectId: string) {
         const { error: upErr } = await supabase.storage
           .from('documents').upload(storagePath, file, {
             upsert: false,
-            onUploadProgress: ({ loaded, total }) => {
-              setUploadProgress({ fileIndex: i + 1, fileCount, fileName: file.name, percent: Math.round((loaded / total) * 100) })
-            },
           })
         if (upErr) throw new Error(`${file.name}: ${upErr.message}`)
         const { title, version } = parseFileName(file.name)
@@ -398,9 +395,6 @@ export function useFileTree(projectId: string) {
         const { error: upErr } = await supabase.storage
           .from('documents').upload(storagePath, file, {
             upsert: false,
-            onUploadProgress: ({ loaded, total }) => {
-              setUploadProgress({ fileIndex: i + 1, fileCount, fileName: file.name, percent: Math.round((loaded / total) * 100) })
-            },
           })
         if (upErr) throw new Error(`${file.name}: ${upErr.message}`)
         const { title, version } = parseFileName(file.name)

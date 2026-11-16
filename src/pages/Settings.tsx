@@ -114,7 +114,7 @@ function WorkspaceSection() {
   }
 
   const handleSave = async () => {
-    await saveSettings({ companyName, footerText, coverStyle: settings.coverStyle })
+    await saveSettings({ companyName, footerText, coverStyle: settings.coverStyle, coverConfig: settings.coverConfig })
     setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
 

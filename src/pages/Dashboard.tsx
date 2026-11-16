@@ -272,7 +272,7 @@ export default function Dashboard() {
                       <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
                         {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(v: number) => [`${v}건`]} />
+                      <Tooltip formatter={(v) => [`${v}건`]} />
                       <Legend iconType="circle" iconSize={10} />
                     </PieChart>
                   </ResponsiveContainer>

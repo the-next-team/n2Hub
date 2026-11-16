@@ -262,7 +262,7 @@ export default function SprintBoard() {
           <>
             {/* 스프린트 헤더 카드 */}
             {editTarget?.id === selected.id ? (
-              <SprintForm initial={selected} onSave={handleUpdate} onCancel={() => setEditTarget(null)} saving={saving} />
+              <SprintForm initial={{ name: selected.name, goal: selected.goal ?? undefined, startDate: selected.startDate ?? undefined, endDate: selected.endDate ?? undefined, status: selected.status }} onSave={handleUpdate} onCancel={() => setEditTarget(null)} saving={saving} />
             ) : (
               <div className={cn('bg-surface border-2 rounded-2xl p-5', selected.status === 'active' ? 'border-primary/30' : 'border-line')}>
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -356,7 +356,7 @@ export default function SprintBoard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" />
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(v: number) => [`${v}개`]} />
+                    <Tooltip formatter={(v) => [`${v}개`]} />
                     <Legend iconType="circle" iconSize={8} />
                     <ReferenceLine y={0} stroke="var(--color-line)" />
                     <Line type="monotone" dataKey="ideal" name="이상적 진행" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={1.5} />

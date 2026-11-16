@@ -281,7 +281,7 @@ function SidebarFileTree({ projectId, onClose }: { projectId: string; onClose: (
             )}
           >
             <SidebarFileIcon name={node.name} />
-            <span className="truncate" title={`${node.name}\n경로: ${folderPath || '루트'}`}>{sidebarLabel(node.name)}</span>
+            <span className="truncate" title={`${node.name}\n경로: 루트`}>{sidebarLabel(node.name)}</span>
           </NavLink>
         )
       )}
@@ -291,7 +291,7 @@ function SidebarFileTree({ projectId, onClose }: { projectId: string; onClose: (
 
 /* ── 프로젝트 버튼 (WBS 진척률 포함) ── */
 function ProjectButton({ project, isOpen, isActive, onClick }: {
-  project: import('../../hooks/useProject').Project
+  project: Project
   isOpen: boolean; isActive: boolean; onClick: () => void
 }) {
   const pct = useWbsProgress(project.id, isOpen || isActive)

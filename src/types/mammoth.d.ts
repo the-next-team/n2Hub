@@ -4,4 +4,5 @@ declare module 'mammoth' {
     messages: { type: string; message: string }[]
   }
   function convertToHtml(input: { arrayBuffer: ArrayBuffer }): Promise<ConversionResult>
+  function extractRawText(input: { arrayBuffer: ArrayBuffer }): Promise<ConversionResult>
 }
