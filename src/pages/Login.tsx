@@ -77,11 +77,11 @@ export default function Login() {
         {/* 메인 카피 */}
         <div>
           <h1 className="text-white text-4xl font-bold leading-tight mb-4">
-            산출물 관리의<br />새로운 기준
+            프로젝트팀의<br />더그아웃
           </h1>
           <p className="text-white/70 text-base leading-relaxed mb-10">
-            IT 프로젝트의 모든 산출물과 이슈를<br />
-            한 곳에서 체계적으로 관리하세요.
+            팀이 머물며 상황을 지켜보고,<br />
+            작전을 주고받는 곳.
           </p>
 
           {/* 기능 목록 */}
